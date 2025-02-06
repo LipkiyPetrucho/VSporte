@@ -187,3 +187,12 @@ cython_debug/
 
 # Исключить локальную базу данных SQLite (если она есть)
 jteam/db.sqlite3
+
+# Исключить статические файлы админской части Django
+/static/admin/
+
+# Исключить файлы debug_toolbar
+/static/debug_toolbar/
+
+# Исключить файлы bootstrap
+/static/bootstrap/
