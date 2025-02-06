@@ -1,0 +1,115 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-05-19 21:34+0000\n"
+"PO-Revision-Date: 2024-05-20 01:46+0400\n"
+"Last-Translator: Пётр Липатов <bang1987@mail.ru>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14)? 2 : 3);\n"
+"X-Translated-Using: django-rosetta 0.10.0\n"
+
+#: account/templates/base.html:45
+msgid "Main"
+msgstr "Главная"
+
+#: account/templates/base.html:48
+msgid "Game list"
+msgstr "Список игр"
+
+#: account/templates/base.html:51
+msgid "Gamers"
+msgstr "Игроки"
+
+#: account/templates/base.html:54
+msgid "Places list"
+msgstr "Список мест"
+
+#: account/templates/base.html:64
+#, python-format
+msgid ""
+"-->\n"
+"<!--                                    %(items)s cart, ₽%(total)s-->\n"
+"<!--                                  "
+msgid_plural ""
+"-->\n"
+"<!--                                    %(items)s carts, ₽%(total)s-->\n"
+"<!--                                  "
+msgstr[0] "%(items)s корзина, ₽%(total)s"
+msgstr[1] "%(items)s корзины, ₽%(total)s"
+msgstr[2] "%(items)s корзины, ₽%(total)s"
+msgstr[3] "%(items)s корзины, ₽%(total)s"
+
+#: cart/forms.py:9
+msgid "Quantity"
+msgstr "Количество"
+
+#: coupons/forms.py:5
+msgid "Coupon"
+msgstr "Купон"
+
+#: jteam/settings.py:150
+msgid "English"
+msgstr "Английский"
+
+#: jteam/settings.py:151
+msgid "Russian"
+msgstr "Русский"
+
+#: jteam/urls.py:13
+msgid "account/"
+msgstr "аккаунт/"
+
+#: jteam/urls.py:15
+msgid "games/"
+msgstr "игры/"
+
+#: jteam/urls.py:17
+msgid "cart/"
+msgstr "корзина/"
+
+#: jteam/urls.py:18
+msgid "orders/"
+msgstr "заказы/"
+
+#: jteam/urls.py:19
+msgid "location/"
+msgstr "локация/"
+
+#: jteam/urls.py:20
+msgid "payment/"
+msgstr "оплата/"
+
+#: jteam/urls.py:21
+msgid "coupons/"
+msgstr "купоны/"
+
+#: location/templates/place/detail.html:22
+msgid "Add to cart"
+msgstr "Добавить в корзину"
+
+#: location/templates/place/detail.html:27
+msgid "People who bought this also bought"
+msgstr "Люди, купившие это, также приобрели"
+
+#: payment/urls.py:9
+msgid "process/"
+msgstr "обработка/"
+
+#: payment/urls.py:10
+msgid "completed/"
+msgstr "завершено/"
+
+#: payment/urls.py:11
+msgid "canceled/"
+msgstr "отменено/"

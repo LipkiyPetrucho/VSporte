@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Рейтинг игр{% endblock %}
+{% block content %}
+ <h1>Рейтинг игр</h1>
+ <ol>
+     {% for game in most_viewed %}
+        <li>
+            <a href="{{ game.get_absolute_url }}">
+                <p class="underline">{{ game.get_sport_display }} - {{ game.user.first_name }}</p>
+            </a>
+            <p>
+                <i class="fas fa-calendar"></i> {{ game.date }}&nbsp;&nbsp;&nbsp;
+                <i class="fas fa-clock"></i> {{ game.start_time }}&nbsp;&nbsp;&nbsp;
+                <i class="fas fa-map-marker"></i> {{ game.place }}
+            </p>
+        </li>
+     {% endfor %}
+ </ol>
+{% endblock %}

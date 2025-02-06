@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Games JTeam{% endblock %}
+
+{% block content %}
+    <h1>Список доступных игр</h1>
+    <p>Выбери игру из списка ниже или создай сам <a href="{% url 'games:create' %}" class="btn btn-primary">Создать игру</a></p>
+
+<!--         id game-list используется для обработки в JavaScript-->
+        <div id="game-list">
+            {% include "games/game/list_games.html" %}
+        </div>
+
+<!--    {% include "pagination.html" with page=games %}-->
+{% endblock %}
+
+{% block domready %}
+<!--Прокрутка страницы вниз, чтобы загрузить дополнительные страницы-->
+ var page = 1;
+  var emptyPage = false;
+  var blockRequest = false;
+
+  window.addEventListener('scroll', function(e) {
+    var margin = document.body.clientHeight - window.innerHeight - 200;
+    if(window.pageYOffset > margin && !emptyPage && !blockRequest) {
+      blockRequest = true;
+      page += 1;
+
+      fetch('?games_only=1&page=' + page)
+      .then(response => response.text())
+      .then(html => {
+        if (html === '') {
+          emptyPage = true;
+        }
+        else {
+          var gameList = document.getElementById('game-list');
+          gameList.insertAdjacentHTML('beforeEnd', html);
+          blockRequest = false;
+        }
+      })
+    }
+  });
+
+  // Launch scroll event
+  const scrollEvent = new Event('scroll');
+  window.dispatchEvent(scrollEvent);
+{% endblock %}

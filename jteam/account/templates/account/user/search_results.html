@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Результаты поиска{% endblock %}
+
+{% block content %}
+    <h1>Результаты поиска</h1>
+    {% if query %}
+        <h3>Результаты для запроса "{{ query }}"</h3>
+    {% endif %}
+    {% if results %}
+        <ul>
+            {% for user in results %}
+                <li>
+                    <a href="{{ user.get_absolute_url }}">{{ user.username }}</a>
+                    {% if user.first_name %}
+                        - {{ user.first_name }}
+                    {% endif %}
+                    {% if user.last_name %}
+                        {{ user.last_name }}
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Ничего не найдено.</p>
+    {% endif %}
+    <p><a href="{% url 'user_list' %}">Вернуться к списку игроков</a></p>
+{% endblock %}

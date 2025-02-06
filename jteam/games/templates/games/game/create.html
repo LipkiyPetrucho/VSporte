@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %} Создать игру {% endblock %}
+
+{% block content %}
+  <h1> Создать игру </h1>
+    <p>* Поля со звёздочкой являются обязательными</p>
+    <form method="post">
+        <div class="createGame">
+            {% csrf_token %}
+            {{ form|crispy }}
+        </div>
+        <div class="createGameButton">
+            <input class="btn btn-primary" type="submit" value="Создать игру">
+        </div>
+    </form>
+{% endblock %}

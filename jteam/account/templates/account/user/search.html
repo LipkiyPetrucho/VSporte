@@ -1,0 +1,15 @@
+{% load crispy_forms_tags %}
+<div class="row">
+    <div class="col">
+        <form action="{% url 'account_search' %}"
+              method="get" role="search" class="form-inline">
+            <div class="form-group mb-2 mr-sm-2">
+                {% csrf_token %}
+                {{ form|crispy }}
+            </div>
+            <button type="submit" class="btn btn-outline-success mb-2">Поиск</button>
+        </form>
+    </div>
+</div>
+
+

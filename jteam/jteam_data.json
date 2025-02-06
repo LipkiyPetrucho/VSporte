@@ -1,0 +1,1261 @@
+[
+{
+  "model": "admin.logentry",
+  "pk": 1,
+  "fields": {
+    "action_time": "2024-03-03T06:36:06.728Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "1",
+    "object_repr": "tennis 2024-03-01 20:44:10 Ставропольская 157",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 2,
+  "fields": {
+    "action_time": "2024-03-07T17:53:47.445Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "4",
+    "object_repr": "bowling 2024-03-07 17:12:49 Георгия Ратнера 10",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 3,
+  "fields": {
+    "action_time": "2024-03-08T10:02:39.107Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "6",
+    "object_repr": "football 2024-03-08 09:56:28 Георгия Ратнера",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 4,
+  "fields": {
+    "action_time": "2024-03-08T11:29:47.511Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "11",
+    "object_repr": "football 2024-03-08 10:58:30 Па 3",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 5,
+  "fields": {
+    "action_time": "2024-03-08T11:29:47.645Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "10",
+    "object_repr": "football 2024-03-08 10:58:30 Па 3",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 6,
+  "fields": {
+    "action_time": "2024-03-08T11:29:47.740Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "9",
+    "object_repr": "football 2024-03-08 10:58:30 Па 3",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 7,
+  "fields": {
+    "action_time": "2024-03-08T11:29:47.865Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "8",
+    "object_repr": "football 2024-03-08 10:58:30 Па Ла",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 8,
+  "fields": {
+    "action_time": "2024-03-08T11:29:47.973Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "7",
+    "object_repr": "football 2024-03-08 10:58:30 Па Ла",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 9,
+  "fields": {
+    "action_time": "2024-03-08T12:01:43.749Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "15",
+    "object_repr": "tennis 2024-03-09 11:48:24 Советской армии 161Б",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 10,
+  "fields": {
+    "action_time": "2024-03-08T12:01:43.872Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "14",
+    "object_repr": "tennis 2024-03-09 11:48:24 Советской армии 161Б",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 11,
+  "fields": {
+    "action_time": "2024-03-08T12:01:43.972Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "13",
+    "object_repr": "tennis 2024-03-09 11:48:24 Советской армии 161Б",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 12,
+  "fields": {
+    "action_time": "2024-03-08T19:39:04.365Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "24",
+    "object_repr": "bowling 2024-03-03 16:06:09 Москва",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 13,
+  "fields": {
+    "action_time": "2024-03-08T19:40:04.498Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "23",
+    "object_repr": "tennis 2024-03-03 16:05:08 Сызрань",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 14,
+  "fields": {
+    "action_time": "2024-03-13T19:44:04.440Z",
+    "user": 1,
+    "content_type": 13,
+    "object_id": "31",
+    "object_repr": "chess 2024-03-23 01:00:00 у меня на даче",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Status\", \"Image\"]}}]"
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$720000$AZNATwkzIKgGvXZzTLFmOb$QWbky8Qy2028qRc6nZXDme9794Qg0wNbgFZilc8PaOw=",
+    "last_login": "2024-03-10T20:54:28.096Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "bang@1987mail.ru",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2024-03-01T20:41:54.353Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$YTyp1QIqykmUv0h3BooK2u$ELANZBQdvJbEfoklV+hEjWiRxrh4b85D7/SUVpFn7Rs=",
+    "last_login": "2024-03-15T18:55:22.494Z",
+    "is_superuser": false,
+    "username": "petr",
+    "first_name": "Пётр",
+    "last_name": "Липатовичикус",
+    "email": "pafos.light@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2024-03-01T20:43:53.700Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 3,
+  "fields": {
+    "password": "pbkdf2_sha256$720000$PVJ5G8nWzqBGUqQfsPzi5N$jom0JnLhhxSEhMqSLDv2F/PDkaWKqztgq6JklnNtOq4=",
+    "last_login": "2024-03-13T19:44:54.238Z",
+    "is_superuser": false,
+    "username": "Danilo",
+    "first_name": "Данило",
+    "last_name": "Липатов",
+    "email": "bang1987@mail.ru",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2024-03-03T11:45:55.718Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 4,
+  "fields": {
+    "password": "pbkdf2_sha256$720000$ncBGG3ksTUaZCPxw3aY5wD$+9Pd/bRSzt+DCaHAFAJZxnPnJHt5Dm9SNRROAbTswU4=",
+    "last_login": "2024-03-13T19:39:09.881Z",
+    "is_superuser": false,
+    "username": "Mask",
+    "first_name": "Ilon",
+    "last_name": "Mask",
+    "email": "ba6yuh@outlook.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2024-03-09T08:52:49.203Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 5,
+  "fields": {
+    "password": "pbkdf2_sha256$720000$BXsEufTmxSEAalZBzFpmOJ$rQfqGDQPfGuWv32D0t1hDU6UZsgC6yoFVJcefFCejX4=",
+    "last_login": "2024-03-13T19:39:37.115Z",
+    "is_superuser": false,
+    "username": "Ukupnik",
+    "first_name": "Укупник",
+    "last_name": "Аркадий",
+    "email": "Effekt-L@yandex.ru",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2024-03-09T21:28:53.879Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 6,
+  "fields": {
+    "password": "pbkdf2_sha256$720000$7XiBwaWvGfCkcH07BHhgxx$El6wfckXRkBvhEMJngO6LOa0aqxHjnezAYb3DgqK+Ww=",
+    "last_login": "2024-03-13T12:11:49.780Z",
+    "is_superuser": false,
+    "username": "Koka",
+    "first_name": "Клава",
+    "last_name": "Кока",
+    "email": "bezborodovser@yandex.ru",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2024-03-13T12:11:40.501Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "2v5dyreicb0w644qn5i12y98smekm5d1",
+  "fields": {
+    "session_data": ".eJxVjDsOwjAQBe_iGlnx-kNMSZ8zRLvrDQ4gW4qTCnF3iJQC2jcz76VG3NY8bk2WcU7qokCdfjdCfkjZQbpjuVXNtazLTHpX9EGbHmqS5_Vw_w4ytvytI3ZJ0FrxHCxBcG5KxOgNdwZoioHAOBNMz4nEBCE_IfYIZ_YAIYp6fwD8XDh3:1riJO8:4HIJ36yWeil7soNBr1DLMo3r50Ma3F7JAPv07u5nYtk",
+    "expire_date": "2024-03-21T19:26:44.768Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "9uisl1f9mdxaft1serc371c288zcbzfi",
+  "fields": {
+    "session_data": ".eJxVjEEOwiAQRe_C2hCgIMWle89AhplBqgaS0q6Md7dNutDtf-_9t4iwLiWunec4kbgII06_WwJ8ct0BPaDem8RWl3lKclfkQbu8NeLX9XD_Dgr0stWOslfJaxi945TAIwwMpD0q6zSHs3Mma1BDQMOoxgwZLYaBKOPGrfh8AQH5OOY:1rlCiA:NjLuVl6dxUWyYGaBAN4b-F3_55xJNYGg1xgYXzfstho",
+    "expire_date": "2024-03-29T18:55:22.631Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "ahmd3i2i9p52767phrwzexg0ebjyzaec",
+  "fields": {
+    "session_data": ".eJxVjDsOwjAUBO_iGln-xD9K-pwhWvsZHEC2FCcV4u4QKQW0OzP7YhO2tUxbz8s0EzszyU6_W0R65LoDuqPeGk-trssc-a7wg3Y-NsrPy-H-HRT08q2jFMlGuBQ8rCVntBcmuWBkgMBgVSDtbCRoqQZjnEIQiPBX5UxIIPb-AM5AN3A:1rkUWC:l00RJnQVfLHazHnk3gFFjTrmJSTVc6G_KYZ4OZRgAy4",
+    "expire_date": "2024-03-27T19:44:04.691Z"
+  }
+},
+{
+  "model": "easy_thumbnails.source",
+  "pk": 1,
+  "fields": {
+    "storage_hash": "0d677af76ca5bf5575d614e04932c3a4",
+    "name": "users/2024/03/08/IMG_0127.JPG",
+    "modified": "2024-03-09T07:53:10.637Z"
+  }
+},
+{
+  "model": "easy_thumbnails.source",
+  "pk": 2,
+  "fields": {
+    "storage_hash": "0d677af76ca5bf5575d614e04932c3a4",
+    "name": "users/2024/03/09/7ApvJhFkAIg.jpg",
+    "modified": "2024-03-09T20:19:22.273Z"
+  }
+},
+{
+  "model": "easy_thumbnails.source",
+  "pk": 3,
+  "fields": {
+    "storage_hash": "0d677af76ca5bf5575d614e04932c3a4",
+    "name": "default-profile-user.jpg",
+    "modified": "2024-03-09T08:53:16.763Z"
+  }
+},
+{
+  "model": "easy_thumbnails.source",
+  "pk": 4,
+  "fields": {
+    "storage_hash": "0d677af76ca5bf5575d614e04932c3a4",
+    "name": "users/2024/03/09/OIP.jpeg",
+    "modified": "2024-03-13T12:04:45.864Z"
+  }
+},
+{
+  "model": "easy_thumbnails.source",
+  "pk": 5,
+  "fields": {
+    "storage_hash": "0d677af76ca5bf5575d614e04932c3a4",
+    "name": "users/2024/03/10/OIP_1.jpeg",
+    "modified": "2024-03-13T19:32:57.801Z"
+  }
+},
+{
+  "model": "easy_thumbnails.source",
+  "pk": 6,
+  "fields": {
+    "storage_hash": "0d677af76ca5bf5575d614e04932c3a4",
+    "name": "users/2024/03/10/IMG_0987.jpg",
+    "modified": "2024-03-13T12:06:07.381Z"
+  }
+},
+{
+  "model": "easy_thumbnails.source",
+  "pk": 7,
+  "fields": {
+    "storage_hash": "0d677af76ca5bf5575d614e04932c3a4",
+    "name": "users/2024/03/13/Koka.jpg",
+    "modified": "2024-03-13T12:14:41.002Z"
+  }
+},
+{
+  "model": "easy_thumbnails.source",
+  "pk": 8,
+  "fields": {
+    "storage_hash": "0d677af76ca5bf5575d614e04932c3a4",
+    "name": "images/2024/03/13/chess.jpeg",
+    "modified": "2024-03-13T19:44:18.217Z"
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 1,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/08\\IMG_0127.JPG.180x180_q85.jpg",
+    "modified": "2024-03-09T07:38:55.877Z",
+    "source": 1
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 2,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/08\\IMG_0127.JPG.100x100_q85.jpg",
+    "modified": "2024-03-09T07:52:40.922Z",
+    "source": 1
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 3,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/08\\IMG_0127.JPG.220x220_q85.jpg",
+    "modified": "2024-03-09T07:53:10.749Z",
+    "source": 1
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 4,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/09\\7ApvJhFkAIg.jpg.220x220_q85.jpg",
+    "modified": "2024-03-09T08:47:16.789Z",
+    "source": 2
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 5,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "default-profile-user.jpg.220x220_q85.jpg",
+    "modified": "2024-03-09T08:53:16.949Z",
+    "source": 3
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 6,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/09\\OIP.jpeg.220x220_q85.jpg",
+    "modified": "2024-03-09T19:23:08.726Z",
+    "source": 4
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 7,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/09\\OIP.jpeg.180x180_q85.jpg",
+    "modified": "2024-03-09T20:18:42.961Z",
+    "source": 4
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 8,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/09\\7ApvJhFkAIg.jpg.180x180_q85.jpg",
+    "modified": "2024-03-09T20:19:22.375Z",
+    "source": 2
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 9,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/10\\OIP_1.jpeg.220x220_q85.jpg",
+    "modified": "2024-03-09T21:33:10.319Z",
+    "source": 5
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 10,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/10\\OIP_1.jpeg.180x180_q85.jpg",
+    "modified": "2024-03-09T21:33:19.328Z",
+    "source": 5
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 11,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/10\\IMG_0987.jpg.220x220_q85.jpg",
+    "modified": "2024-03-09T21:40:03.170Z",
+    "source": 6
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 12,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/10\\IMG_0987.jpg.180x180_q85.jpg",
+    "modified": "2024-03-09T21:40:08.679Z",
+    "source": 6
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 13,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/09\\OIP.jpeg.80x80_q85_crop-100%.jpg",
+    "modified": "2024-03-13T12:04:46.072Z",
+    "source": 4
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 14,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/10\\IMG_0987.jpg.80x80_q85_crop-100%.jpg",
+    "modified": "2024-03-13T12:06:07.474Z",
+    "source": 6
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 15,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/13\\Koka.jpg.220x220_q85.jpg",
+    "modified": "2024-03-13T12:12:53.732Z",
+    "source": 7
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 16,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/13\\Koka.jpg.80x80_q85_crop-100%.jpg",
+    "modified": "2024-03-13T12:13:40.691Z",
+    "source": 7
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 17,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/13\\Koka.jpg.180x180_q85.jpg",
+    "modified": "2024-03-13T12:14:41.359Z",
+    "source": 7
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 18,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "users/2024/03/10\\OIP_1.jpeg.80x80_q85_crop-100%.jpg",
+    "modified": "2024-03-13T19:32:57.953Z",
+    "source": 5
+  }
+},
+{
+  "model": "easy_thumbnails.thumbnail",
+  "pk": 19,
+  "fields": {
+    "storage_hash": "d26becbf46ac48eda79c7a39a13a02dd",
+    "name": "images/2024/03/13\\chess.jpeg.80x80_q85_crop-100%.jpg",
+    "modified": "2024-03-13T19:44:18.379Z",
+    "source": 8
+  }
+},
+{
+  "model": "account.profile",
+  "pk": 1,
+  "fields": {
+    "user": 2,
+    "date_of_birth": null,
+    "photo": "users/2024/03/09/7ApvJhFkAIg.jpg"
+  }
+},
+{
+  "model": "account.profile",
+  "pk": 2,
+  "fields": {
+    "user": 3,
+    "date_of_birth": "2019-11-15",
+    "photo": "users/2024/03/10/IMG_0987.jpg"
+  }
+},
+{
+  "model": "account.profile",
+  "pk": 3,
+  "fields": {
+    "user": 4,
+    "date_of_birth": "1986-12-14",
+    "photo": "users/2024/03/09/OIP.jpeg"
+  }
+},
+{
+  "model": "account.profile",
+  "pk": 4,
+  "fields": {
+    "user": 5,
+    "date_of_birth": "1967-12-05",
+    "photo": "users/2024/03/10/OIP_1.jpeg"
+  }
+},
+{
+  "model": "account.profile",
+  "pk": 5,
+  "fields": {
+    "user": 6,
+    "date_of_birth": "1995-07-02",
+    "photo": "users/2024/03/13/Koka.jpg"
+  }
+},
+{
+  "model": "account.contact",
+  "pk": 1,
+  "fields": {
+    "user_from": 2,
+    "user_to": 5,
+    "created": "2024-03-10T16:59:33.569Z"
+  }
+},
+{
+  "model": "account.contact",
+  "pk": 18,
+  "fields": {
+    "user_from": 2,
+    "user_to": 3,
+    "created": "2024-03-10T18:21:52.872Z"
+  }
+},
+{
+  "model": "account.contact",
+  "pk": 21,
+  "fields": {
+    "user_from": 4,
+    "user_to": 4,
+    "created": "2024-03-10T18:22:27.939Z"
+  }
+},
+{
+  "model": "account.contact",
+  "pk": 23,
+  "fields": {
+    "user_from": 4,
+    "user_to": 2,
+    "created": "2024-03-12T21:48:42.026Z"
+  }
+},
+{
+  "model": "account.contact",
+  "pk": 24,
+  "fields": {
+    "user_from": 4,
+    "user_to": 3,
+    "created": "2024-03-12T21:48:54.681Z"
+  }
+},
+{
+  "model": "account.contact",
+  "pk": 25,
+  "fields": {
+    "user_from": 4,
+    "user_to": 5,
+    "created": "2024-03-12T21:49:09.556Z"
+  }
+},
+{
+  "model": "account.contact",
+  "pk": 26,
+  "fields": {
+    "user_from": 3,
+    "user_to": 2,
+    "created": "2024-03-13T12:05:10.469Z"
+  }
+},
+{
+  "model": "account.contact",
+  "pk": 27,
+  "fields": {
+    "user_from": 3,
+    "user_to": 4,
+    "created": "2024-03-13T12:05:30.625Z"
+  }
+},
+{
+  "model": "account.contact",
+  "pk": 28,
+  "fields": {
+    "user_from": 6,
+    "user_to": 2,
+    "created": "2024-03-13T12:13:24.031Z"
+  }
+},
+{
+  "model": "account.contact",
+  "pk": 29,
+  "fields": {
+    "user_from": 3,
+    "user_to": 6,
+    "created": "2024-03-13T12:24:32.899Z"
+  }
+},
+{
+  "model": "games.game",
+  "pk": 2,
+  "fields": {
+    "user": 2,
+    "sport": "tennis",
+    "place": "samara",
+    "date": "2024-03-01",
+    "start_time": "20:44:10",
+    "duration": "00:00:01",
+    "price": "212.00",
+    "description": "",
+    "created_at": "2024-03-01T20:45:44.168Z",
+    "updated_at": "2024-03-01T20:45:44.168Z",
+    "max_players": 2,
+    "status": "Open",
+    "slug": "tennis-2024-03-01-samara",
+    "image": "",
+    "joined_players": [
+      1,
+      3
+    ]
+  }
+},
+{
+  "model": "games.game",
+  "pk": 3,
+  "fields": {
+    "user": 2,
+    "sport": "football",
+    "place": "samara arena",
+    "date": "2024-03-03",
+    "start_time": "06:36:49",
+    "duration": "00:00:01",
+    "price": "349.99",
+    "description": "",
+    "created_at": "2024-03-03T06:37:46.437Z",
+    "updated_at": "2024-03-03T06:37:46.437Z",
+    "max_players": 10,
+    "status": "Open",
+    "slug": "football-2024-03-03-samara-arena",
+    "image": "",
+    "joined_players": [
+      1,
+      2,
+      3,
+      4
+    ]
+  }
+},
+{
+  "model": "games.game",
+  "pk": 5,
+  "fields": {
+    "user": 2,
+    "sport": "bowling",
+    "place": "Geogia ratnera",
+    "date": "2024-03-07",
+    "start_time": "17:12:49",
+    "duration": "00:00:02",
+    "price": "599.99",
+    "description": "like game",
+    "created_at": "2024-03-07T17:14:15.788Z",
+    "updated_at": "2024-03-07T17:14:15.788Z",
+    "max_players": 6,
+    "status": "Open",
+    "slug": "bowling-2024-03-07-geogia-ratnera",
+    "image": "",
+    "joined_players": [
+      2
+    ]
+  }
+},
+{
+  "model": "games.game",
+  "pk": 12,
+  "fields": {
+    "user": 2,
+    "sport": "football",
+    "place": "Георгия Ратнера 10",
+    "date": "2024-03-08",
+    "start_time": "11:29:26",
+    "duration": "00:00:01",
+    "price": "598.99",
+    "description": "я тебя накерню, падла",
+    "created_at": "2024-03-08T11:30:35.855Z",
+    "updated_at": "2024-03-08T11:30:35.855Z",
+    "max_players": 2,
+    "status": "Open",
+    "slug": "football-2024-03-08-petr",
+    "image": "",
+    "joined_players": []
+  }
+},
+{
+  "model": "games.game",
+  "pk": 16,
+  "fields": {
+    "user": 2,
+    "sport": "tennis",
+    "place": "Советской армии 161Б",
+    "date": "2024-03-09",
+    "start_time": "11:48:24",
+    "duration": "00:00:04",
+    "price": "19.00",
+    "description": "кушать будет подано!",
+    "created_at": "2024-03-08T12:02:16.328Z",
+    "updated_at": "2024-03-08T12:02:16.328Z",
+    "max_players": 4,
+    "status": "Open",
+    "slug": "tennis-2024-03-09-petr",
+    "image": "",
+    "joined_players": [
+      2
+    ]
+  }
+},
+{
+  "model": "games.game",
+  "pk": 17,
+  "fields": {
+    "user": 2,
+    "sport": "bowling",
+    "place": "Георгия Ратнера 10",
+    "date": "2024-03-08",
+    "start_time": "15:58:40",
+    "duration": "00:00:02",
+    "price": "4.00",
+    "description": "",
+    "created_at": "2024-03-08T15:59:02.495Z",
+    "updated_at": "2024-03-08T15:59:02.495Z",
+    "max_players": 3,
+    "status": "Open",
+    "slug": "bowling-2024-03-08-petr",
+    "image": "",
+    "joined_players": []
+  }
+},
+{
+  "model": "games.game",
+  "pk": 18,
+  "fields": {
+    "user": 2,
+    "sport": "tennis",
+    "place": "Московское шоссе 1",
+    "date": "2024-03-10",
+    "start_time": "16:00:00",
+    "duration": "00:00:03",
+    "price": "99.99",
+    "description": "",
+    "created_at": "2024-03-08T16:00:36.196Z",
+    "updated_at": "2024-03-08T16:00:36.196Z",
+    "max_players": 12,
+    "status": "Open",
+    "slug": "tennis-2024-03-10-petr",
+    "image": "",
+    "joined_players": []
+  }
+},
+{
+  "model": "games.game",
+  "pk": 19,
+  "fields": {
+    "user": 2,
+    "sport": "football",
+    "place": "Волочаевская 168",
+    "date": "2024-03-11",
+    "start_time": "16:00:59",
+    "duration": "00:00:02",
+    "price": "-0.01",
+    "description": "",
+    "created_at": "2024-03-08T16:01:44.141Z",
+    "updated_at": "2024-03-08T16:01:44.141Z",
+    "max_players": 14,
+    "status": "Open",
+    "slug": "football-2024-03-11-petr",
+    "image": "",
+    "joined_players": []
+  }
+},
+{
+  "model": "games.game",
+  "pk": 20,
+  "fields": {
+    "user": 2,
+    "sport": "tennis",
+    "place": "Вилоновская 168",
+    "date": "2024-03-11",
+    "start_time": "16:02:05",
+    "duration": "00:00:02",
+    "price": "-100.00",
+    "description": "",
+    "created_at": "2024-03-08T16:02:48.414Z",
+    "updated_at": "2024-03-08T16:02:48.414Z",
+    "max_players": 1,
+    "status": "Open",
+    "slug": "tennis-2024-03-11-petr",
+    "image": "",
+    "joined_players": []
+  }
+},
+{
+  "model": "games.game",
+  "pk": 21,
+  "fields": {
+    "user": 2,
+    "sport": "bowling",
+    "place": "Демократическая 20",
+    "date": "2024-03-12",
+    "start_time": "16:03:17",
+    "duration": "00:00:02",
+    "price": "-100.00",
+    "description": "",
+    "created_at": "2024-03-08T16:03:45.798Z",
+    "updated_at": "2024-03-08T16:03:45.798Z",
+    "max_players": 1,
+    "status": "Open",
+    "slug": "bowling-2024-03-12-petr",
+    "image": "",
+    "joined_players": []
+  }
+},
+{
+  "model": "games.game",
+  "pk": 22,
+  "fields": {
+    "user": 2,
+    "sport": "football",
+    "place": "Самара, Димитрова 129",
+    "date": "2024-03-13",
+    "start_time": "16:04:05",
+    "duration": "00:00:02",
+    "price": "-100.00",
+    "description": "",
+    "created_at": "2024-03-08T16:04:37.079Z",
+    "updated_at": "2024-03-08T16:04:37.079Z",
+    "max_players": 1,
+    "status": "Open",
+    "slug": "football-2024-03-13-petr",
+    "image": "",
+    "joined_players": []
+  }
+},
+{
+  "model": "games.game",
+  "pk": 25,
+  "fields": {
+    "user": 2,
+    "sport": "tennis",
+    "place": "Караганда",
+    "date": "2024-03-03",
+    "start_time": "16:06:36",
+    "duration": "00:00:02",
+    "price": "-100.00",
+    "description": "",
+    "created_at": "2024-03-08T16:06:46.800Z",
+    "updated_at": "2024-03-08T16:06:46.800Z",
+    "max_players": 1,
+    "status": "Open",
+    "slug": "tennis-2024-03-03-petr",
+    "image": "",
+    "joined_players": []
+  }
+},
+{
+  "model": "games.game",
+  "pk": 26,
+  "fields": {
+    "user": 2,
+    "sport": "bowling",
+    "place": "Казань",
+    "date": "2024-03-03",
+    "start_time": "16:07:13",
+    "duration": "00:00:02",
+    "price": "-100.00",
+    "description": "",
+    "created_at": "2024-03-08T16:07:26.688Z",
+    "updated_at": "2024-03-08T16:07:26.688Z",
+    "max_players": 1,
+    "status": "Open",
+    "slug": "bowling-2024-03-03-petr",
+    "image": "",
+    "joined_players": [
+      3
+    ]
+  }
+},
+{
+  "model": "games.game",
+  "pk": 27,
+  "fields": {
+    "user": 2,
+    "sport": "football",
+    "place": "Бахмут",
+    "date": "2024-03-03",
+    "start_time": "16:08:20",
+    "duration": "00:00:02",
+    "price": "-100.00",
+    "description": "",
+    "created_at": "2024-03-08T16:08:45.279Z",
+    "updated_at": "2024-03-08T16:08:45.279Z",
+    "max_players": 1,
+    "status": "Open",
+    "slug": "football-2024-03-03-petr",
+    "image": "",
+    "joined_players": []
+  }
+},
+{
+  "model": "games.game",
+  "pk": 28,
+  "fields": {
+    "user": 2,
+    "sport": "football",
+    "place": "Советской армии 161Б",
+    "date": "2024-03-18",
+    "start_time": "20:20:00",
+    "duration": "00:01:20",
+    "price": "400.00",
+    "description": "Осторожно много гондонов! =)",
+    "created_at": "2024-03-08T19:23:33.730Z",
+    "updated_at": "2024-03-08T19:23:33.730Z",
+    "max_players": 10,
+    "status": "Open",
+    "slug": "football-2024-03-18-petr",
+    "image": "",
+    "joined_players": [
+      2,
+      4
+    ]
+  }
+},
+{
+  "model": "games.game",
+  "pk": 29,
+  "fields": {
+    "user": 2,
+    "sport": "ice hockey",
+    "place": "ЦСКА ВВС",
+    "date": "2024-03-12",
+    "start_time": "20:59:00",
+    "duration": "00:02:00",
+    "price": "390.00",
+    "description": "",
+    "created_at": "2024-03-08T20:54:32.751Z",
+    "updated_at": "2024-03-08T20:54:32.751Z",
+    "max_players": 20,
+    "status": "Open",
+    "slug": "ice-hockey-2024-03-12-none-petr",
+    "image": "",
+    "joined_players": [
+      2,
+      4
+    ]
+  }
+},
+{
+  "model": "games.game",
+  "pk": 30,
+  "fields": {
+    "user": 4,
+    "sport": "beach volleyball",
+    "place": "Самарская набережная",
+    "date": "2024-06-15",
+    "start_time": "11:10:00",
+    "duration": "00:04:00",
+    "price": "0.00",
+    "description": "платим тренеру, если найдём",
+    "created_at": "2024-03-12T21:41:58.980Z",
+    "updated_at": "2024-03-12T21:41:58.980Z",
+    "max_players": 8,
+    "status": "Open",
+    "slug": "beach-volleyball-2024-06-15-none-mask",
+    "image": "",
+    "joined_players": [
+      3,
+      4,
+      6
+    ]
+  }
+},
+{
+  "model": "games.game",
+  "pk": 31,
+  "fields": {
+    "user": 5,
+    "sport": "chess",
+    "place": "у меня на даче",
+    "date": "2024-03-23",
+    "start_time": "01:00:00",
+    "duration": "00:05:30",
+    "price": "0.00",
+    "description": "шашлык обеспечен",
+    "created_at": "2024-03-13T19:32:05.489Z",
+    "updated_at": "2024-03-13T19:44:04.379Z",
+    "max_players": 2,
+    "status": "open",
+    "slug": "chess-2024-03-23-none-ukupnik",
+    "image": "images/2024/03/13/chess.jpeg",
+    "joined_players": [
+      4,
+      5
+    ]
+  }
+},
+{
+  "model": "actions.action",
+  "pk": 1,
+  "fields": {
+    "user": 4,
+    "verb": "joins",
+    "created": "2024-03-13T11:59:30.489Z",
+    "target_ct": 13,
+    "target_id": 28
+  }
+},
+{
+  "model": "actions.action",
+  "pk": 2,
+  "fields": {
+    "user": 3,
+    "verb": "is following",
+    "created": "2024-03-13T12:05:10.609Z",
+    "target_ct": 4,
+    "target_id": 2
+  }
+},
+{
+  "model": "actions.action",
+  "pk": 3,
+  "fields": {
+    "user": 3,
+    "verb": "joins",
+    "created": "2024-03-13T12:05:21.276Z",
+    "target_ct": 13,
+    "target_id": 30
+  }
+},
+{
+  "model": "actions.action",
+  "pk": 4,
+  "fields": {
+    "user": 3,
+    "verb": "is following",
+    "created": "2024-03-13T12:05:30.767Z",
+    "target_ct": 4,
+    "target_id": 4
+  }
+},
+{
+  "model": "actions.action",
+  "pk": 5,
+  "fields": {
+    "user": 3,
+    "verb": "joins",
+    "created": "2024-03-13T12:05:37.276Z",
+    "target_ct": 13,
+    "target_id": 29
+  }
+},
+{
+  "model": "actions.action",
+  "pk": 6,
+  "fields": {
+    "user": 6,
+    "verb": "has created an account",
+    "created": "2024-03-13T12:11:41.666Z",
+    "target_ct": null,
+    "target_id": null
+  }
+},
+{
+  "model": "actions.action",
+  "pk": 7,
+  "fields": {
+    "user": 6,
+    "verb": "joins",
+    "created": "2024-03-13T12:13:17.176Z",
+    "target_ct": 13,
+    "target_id": 30
+  }
+},
+{
+  "model": "actions.action",
+  "pk": 8,
+  "fields": {
+    "user": 6,
+    "verb": "is following",
+    "created": "2024-03-13T12:13:24.176Z",
+    "target_ct": 4,
+    "target_id": 2
+  }
+},
+{
+  "model": "actions.action",
+  "pk": 9,
+  "fields": {
+    "user": 3,
+    "verb": "подписался(ась) на",
+    "created": "2024-03-13T12:24:33.047Z",
+    "target_ct": 4,
+    "target_id": 6
+  }
+},
+{
+  "model": "actions.action",
+  "pk": 10,
+  "fields": {
+    "user": 3,
+    "verb": "присоединился(ась) к игре",
+    "created": "2024-03-13T12:24:53.552Z",
+    "target_ct": 13,
+    "target_id": 26
+  }
+},
+{
+  "model": "actions.action",
+  "pk": 11,
+  "fields": {
+    "user": 5,
+    "verb": "создал(а) игру",
+    "created": "2024-03-13T19:32:05.613Z",
+    "target_ct": 13,
+    "target_id": 31
+  }
+},
+{
+  "model": "actions.action",
+  "pk": 12,
+  "fields": {
+    "user": 5,
+    "verb": "присоединился(ась) к игре",
+    "created": "2024-03-13T19:32:13.717Z",
+    "target_ct": 13,
+    "target_id": 31
+  }
+},
+{
+  "model": "actions.action",
+  "pk": 13,
+  "fields": {
+    "user": 4,
+    "verb": "присоединился(ась) к игре",
+    "created": "2024-03-13T19:39:14.791Z",
+    "target_ct": 13,
+    "target_id": 31
+  }
+}
+]

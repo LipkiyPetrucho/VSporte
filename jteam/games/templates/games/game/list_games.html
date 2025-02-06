@@ -1,0 +1,19 @@
+<div class="row row-cols-1 g-4">
+{% for game in games %}
+    <div class="col">
+            <div class="card">
+              <div class="card-body">
+                <div class="info">
+                    <a href="{{ game.get_absolute_url }}">
+                        {{ game.get_sport_display }}&nbsp;&nbsp;&nbsp;
+                        <i class="fas fa-calendar"></i> &nbsp; {{ game.date }}&nbsp;&nbsp;&nbsp;
+                        <i class="fas fa-clock"></i> {{ game.start_time }}&nbsp;&nbsp;&nbsp;
+                        <i class="fas fa-map-marker"></i> &nbsp; {{ game.place }}
+                    </a>
+                </div>
+              </div>
+            </div>
+    </div>
+{% endfor %}
+</div>
+

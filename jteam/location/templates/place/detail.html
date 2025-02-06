@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}
+ {{ place.name }}
+{% endblock %}
+{% block content %}
+    <div class="product-detail">
+        <img src="{% if place.image %}{{ place.image.url }}{% else %}
+        {% static 'image/png/no_image.png' %}{% endif %}">
+        <h1>{{ place.name }}</h1>
+        <h2>
+            <a href="{{ place.city.get_absolute_url }}">
+                {{ place.city }}
+            </a>
+        </h2>
+        <p class="price">₽{{ place.price }}</p>
+        <form action="{% url 'cart:cart_add' place.id %}" method="post">
+            {{ cart_place_form }}
+            {% csrf_token %}
+            <input type="submit" value="{% trans 'Add to cart' %}">
+        </form>
+        {{ place.description|linebreaks }}
+        {% if recommended_places %}
+        <div class="recommendations">
+            <h3>{% trans "People who bought this also bought" %}</h3>
+            {% for p in recommended_places %}
+                <div class="item">
+                    <a href="{{ p.get_absolute_url }}">
+                        <img src="{% if p.image %}{{ p.image.url }}{% else %}
+                        {% static 'image/png/no_image.png' %}{% endif %}">
+                    </a>
+                    <p><a href="{{ p.get_absolute_url }}">{{ p.name }}</a></p>
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}

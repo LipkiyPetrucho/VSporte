@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+  <h1>Dashboard</h1>
+  {% with total_images_created=request.user.images_created.count %}
+  <p>Добро пожаловать,
+    {% if user.first_name %}
+    {{ user.first_name }}
+    {% else %}
+    {{ user.username }}
+    {% endif %}
+    , на вашу страницу.</p>
+  {% endwith %}
+
+    <p>Вы можете также <a href="{% url 'edit' %}">редактировать свой профиль</a>
+    или <a href="{% url 'password_change' %}"> изменить свой пароль </a>
+  </p>
+
+  <a href="{% url 'games:create' %}" class="button">Создать игру</a>
+  <a href="{% url 'games:ranking' %}" class="button">Рейтинг игр</a>
+
+  <h2>What's happening</h2>
+  <div id="action-list">
+      {% for action in actions %}
+        {% include "actions/action/detail.html" %}
+      {% endfor %}
+  </div>
+{% endblock %}

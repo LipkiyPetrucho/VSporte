@@ -1,0 +1,75 @@
+services:
+  web-app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./jteam:/jteam
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=${POSTGRES_DB_HOST}
+      - DB_NAME=${POSTGRES_DB_NAME}
+      - DB_USER=${POSTGRES_DB_USER}
+      - DB_PASS=${POSTGRES_DB_PASSWORD}
+    command: >
+      sh -c "python manage.py runserver 0.0.0.0:8000 &&
+      python manage.py migrate"
+    depends_on:
+      - database
+
+  database:
+    image: postgres:14.6-alpine
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB_NAME}
+      - POSTGRES_USER=${POSTGRES_DB_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_DB_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - pg_data:/var/lib/postgresql/data/pgdata
+
+  redis:
+    image: redis:7.0.5-alpine
+    hostname: redis
+
+
+  worker:
+    build:
+      context: .
+    hostname: worker
+    entrypoint: celery
+    command: -A jteam.celery:app worker --loglevel=info
+    volumes:
+      - ./jteam:/jteam
+    links:
+      - redis
+    depends_on:
+      - redis
+      - database
+    environment:
+      - DB_HOST=${POSTGRES_DB_HOST}
+      - DB_NAME=${POSTGRES_DB_NAME}
+      - DB_USER=${POSTGRES_DB_USER}
+      - DB_PASS=${POSTGRES_DB_PASSWORD}
+
+  flower:
+    build:
+      context: .
+    hostname: flower
+    entrypoint: celery
+    command: -A jteam.celery:app flower
+    volumes:
+      - ./jteam:/jteam
+    links:
+      - redis
+    depends_on:
+      - redis
+    ports:
+      - "5555:5555"
+
+volumes:
+  pg_data:
+

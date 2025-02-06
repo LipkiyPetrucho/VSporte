@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load thumbnail %}
+
+{% block title %}{{ game.sport }} | {{ user.username }}{% endblock %}
+
+{% block content %}
+
+    <h1>{{ game.get_sport_display }}
+        <p>{% if game.image %}
+          {% thumbnail game.image "100x100" crop="100%" as cover %}
+            <img src="{{ cover.url }}" class="item-img">
+        {% endif %}
+        </p>
+    </h1>
+        <p>{{ user.first_name }} - {{ user.email }}</p>
+        <p>
+            <i class="fas fa-calendar"></i> {{ game.date }}&nbsp;&nbsp;&nbsp;
+            <i class="fas fa-clock"></i> {{ game.start_time }}&nbsp;&nbsp;&nbsp;
+            <i class="fas fa-map-marker"></i> {{ game.place }}
+        </p>
+    <p>{{ game.description }}</p>
+
+    <p>
+      <i class="fas fa-coins"></i> {{ game.price }}
+    </p>
+
+    {% with total_jones=game.joined_players.count joined_players=game.joined_players.all %}
+    <div>
+        <p><i class="fas fa-users"></i>
+        <span class="count">
+            {{ total_jones }} / {{ game.max_players }}
+        </span></p>
+        <p> <i class="fas fa-eye"></i>
+        <span class="count">
+            {{ total_views }} view{{ total_views|pluralize }}
+        </span></p>
+        <a href="#" data-id="{{ game.id }}"
+           data-action="{% if request.user in joined_players %}un{% endif %}join"
+           data-max-players="{{ game.max_players }}"
+           class="like button">
+            {% if request.user not in joined_players %}
+                Join
+            {% else %}
+                Unjoin
+            {% endif %}
+        </a>
+    </div>
+        <div class="image-likes">
+            {% for user in joined_players %}
+                <div>
+                    {% if user.profile.photo %}
+                        {% thumbnail user.profile.photo "80x80" crop="100%" as im %}
+                        <img src="{{ im.url }}" class="item-img">
+                    {% endif %}
+                    <p>{{ user.first_name }}</p>
+                </div>
+            {% empty %}
+                Nobody players joined
+            {% endfor %}
+        </div>
+
+    {% endwith %}
+{% endblock %}
+
+{% block domready %}
+    const url = '{% url "games:join" %}';
+
+    var options = {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrftoken},
+        mode: 'same-origin'
+    }
+
+    document.querySelector('a.button')
+            .addEventListener('click', function(e){
+        e.preventDefault();
+        var joinButton = this;
+
+        var gameId = joinButton.dataset.id;
+        var action = joinButton.dataset.action;
+
+    // добавить тело запроса
+    var formData = new FormData();
+    formData.append('id', joinButton.dataset.id);
+    formData.append('action', joinButton.dataset.action);
+    options['body'] = formData;
+
+    // отправить HTTP-запрос
+    fetch(url, options)
+    .then(response => response.json())
+    .then(data => {
+        if (data['status'] ==='ok')
+        {
+            var previousAction = joinButton.dataset.action;
+
+            // переключить текст кнопки и атрибут data-action
+            var action = previousAction === 'join' ? 'unjoin' : 'join';
+            joinButton.dataset.action = action;
+            joinButton.innerHTML = action;
+
+            // обновить количество присоединений игроков
+            var joinCount = document.querySelector('span.count');
+            var totalJoins = parseInt(joinCount.innerHTML);
+            var maxPlayers = parseInt(joinButton.dataset.maxPlayers);
+            joinCount.innerHTML = previousAction === 'join' ? totalJoins + 1 + ' / ' + maxPlayers : totalJoins - 1 + ' / ' + maxPlayers;
+        }
+      })
+    });
+{% endblock %}
