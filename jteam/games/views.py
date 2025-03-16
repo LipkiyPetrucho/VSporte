@@ -28,15 +28,28 @@ def validate_time(value):
 @login_required
 def game_create(request):
     if request.method == "POST":
-        form = GameCreateForm(data=request.POST)
+        form = GameCreateForm(data=request.POST, files=request.FILES)
         if form.is_valid():
-            cd = form.cleaned_data
             new_game = form.save(commit=False)
             new_game.user = request.user
-            new_game.save()
-            create_action(request.user, "создал(а) игру", new_game)
-            messages.success(request, "Игра успешно создана")
-            return redirect(new_game.get_absolute_url())
+            
+            try:
+                # Округляем время до минут
+                start_time = new_game.start_time.replace(second=0, microsecond=0)
+                new_game.start_time = start_time
+                
+                # Проверяем, что время в будущем
+                if start_time <= timezone.localtime(timezone.now()):
+                    messages.error(request, "Время начала игры должно быть в будущем")
+                    return render(request, "games/game/create.html", {"section": "games", "form": form})
+                
+                new_game.save()
+                create_action(request.user, "создал(а) игру", new_game)
+                messages.success(request, "Игра успешно создана")
+                return redirect(new_game.get_absolute_url())
+            except ValidationError as e:
+                messages.error(request, e.message)
+                return render(request, "games/game/create.html", {"section": "games", "form": form})
     else:
         form = GameCreateForm()
     return render(request, "games/game/create.html", {"section": "games", "form": form})
