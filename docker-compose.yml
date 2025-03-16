@@ -6,6 +6,8 @@ services:
       - "8000:8000"
     volumes:
       - ./jteam:/jteam
+      - media_data:/jteam/media
+      - ./entrypoint.sh:/entrypoint.sh
     env_file:
       - .env
     environment:
@@ -13,26 +15,28 @@ services:
       - DB_NAME=${POSTGRES_DB_NAME}
       - DB_USER=${POSTGRES_DB_USER}
       - DB_PASS=${POSTGRES_DB_PASSWORD}
-    command: >
-      sh -c "python manage.py runserver 0.0.0.0:8000 &&
-      python manage.py migrate"
+    command: sh /entrypoint.sh
     depends_on:
-      - database
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
     networks:
       - vsporte
 
   database:
     image: postgres:14.6-alpine
+    restart: always
     env_file:
       - .env
     environment:
       - POSTGRES_DB=${POSTGRES_DB_NAME}
       - POSTGRES_USER=${POSTGRES_DB_USER}
       - POSTGRES_PASSWORD=${POSTGRES_DB_PASSWORD}
-      - POSTGRES_DB_HOST=${POSTGRES_DB_HOST}
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
-      - pg_data:/var/lib/postgresql/data/pgdata
+      - postgres_data:/var/lib/postgresql/data/pgdata
     networks:
       - vsporte
     healthcheck:
@@ -44,23 +48,32 @@ services:
   redis:
     image: redis:7.0.5-alpine
     hostname: redis
+    restart: always
+    volumes:
+      - redis_data:/data
     networks:
       - vsporte
-
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   worker:
     build:
       context: .
     hostname: worker
+    restart: always
     entrypoint: celery
     command: -A jteam.celery:app worker --loglevel=info
     volumes:
       - ./jteam:/jteam
-    links:
-      - redis
+      - media_data:/jteam/media
     depends_on:
-      - redis
-      - database
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - DB_HOST=${POSTGRES_DB_HOST}
       - DB_NAME=${POSTGRES_DB_NAME}
@@ -69,40 +82,64 @@ services:
     networks:
       - vsporte
 
-  flower:
+  celery-beat:
     build:
       context: .
-    hostname: flower
+    restart: always
     entrypoint: celery
-    command: -A jteam.celery:app flower
+    command: [ "-A", "jteam.celery:app", "beat", "--loglevel=info" ]
     volumes:
       - ./jteam:/jteam
-    links:
-      - redis
+      - media_data:/jteam/media
     depends_on:
-      - redis
-    ports:
-      - "5555:5555"
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DB_HOST=${POSTGRES_DB_HOST}
+      - DB_NAME=${POSTGRES_DB_NAME}
+      - DB_USER=${POSTGRES_DB_USER}
+      - DB_PASS=${POSTGRES_DB_PASSWORD}
     networks:
       - vsporte
 
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: jteam_pgadmin
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
-      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
-      - PGADMIN_LISTEN_PORT=80
-    ports:
-      - "8080:80"
-    depends_on:
-      - database
-    networks:
-      - vsporte
+#  flower:
+#    build:
+#      context: .
+#    hostname: flower
+#    entrypoint: celery
+#    command: -A jteam.celery:app flower
+#    volumes:
+#      - ./jteam:/jteam
+#    links:
+#      - redis
+#    depends_on:
+#      - redis
+#    ports:
+#      - "5555:5555"
+#    networks:
+#      - vsporte
+
+#  pgadmin:
+#    image: dpage/pgadmin4
+#    container_name: jteam_pgadmin
+#    environment:
+#      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
+#      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
+#      - PGADMIN_LISTEN_PORT=80
+#    ports:
+#      - "8080:80"
+#    depends_on:
+#      - database
+#    networks:
+#      - vsporte
 
 networks:
   vsporte:
 
-volumes:
-  pg_data:
 
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:

@@ -18,6 +18,11 @@
             <i class="fas fa-clock"></i> {{ game.start_time }}&nbsp;&nbsp;&nbsp;
             <i class="fas fa-map-marker"></i> {{ game.place }}
         </p>
+    <!-- Вывод статуса игры -->
+    <p>
+        <strong>Status:</strong> {{ game.get_status_display }}
+    </p>
+
     <p>{{ game.description }}</p>
 
     <p>
