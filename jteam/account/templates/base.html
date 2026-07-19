@@ -12,6 +12,7 @@
     {% load thumbnail %}
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/notifications.css' %}">
+    <link rel="stylesheet" href="{% static 'css/account-settings.css' %}">
     <link rel="shortcut icon" href="{% static 'image/jpeg/logo_jteam_ico.ico' %}" type="image/x-icon"/>
     <!-- icons with fontawesomefree -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6/css/all.min.css">
@@ -79,6 +80,23 @@
                     <a href="{% url 'user_detail' request.user.username %}" class="profile-link">
                         {{ request.user.first_name|default:request.user.username }}
                     </a>
+                    {# Десктоп: точка входа в те же плейсхолдеры настроек #}
+                    <div class="header-account-settings">
+                        <button type="button"
+                                class="header-account-settings__toggle"
+                                id="header-settings-toggle"
+                                aria-label="Настройки"
+                                aria-expanded="false"
+                                aria-controls="header-settings-menu">
+                            <i class="fas fa-bars" aria-hidden="true"></i>
+                        </button>
+                        <div class="account-settings-menu account-settings-menu--dropdown"
+                             id="header-settings-menu"
+                             hidden
+                             aria-label="Настройки аккаунта">
+                            {% include "includes/account_settings_menu.html" %}
+                        </div>
+                    </div>
                     <form action="{% url 'logout' %}" method="post" class="logout-form">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-success">Выйти</button>
@@ -106,6 +124,29 @@
         const csrftoken = Cookies.get('csrftoken');
         document.addEventListener('DOMContentLoaded', (event) => {
             // DOM загружена
+            const headerSettingsToggle = document.getElementById('header-settings-toggle');
+            const headerSettingsMenu = document.getElementById('header-settings-menu');
+            const closeHeaderSettings = () => {
+                if (!headerSettingsMenu || !headerSettingsToggle) return;
+                headerSettingsMenu.hidden = true;
+                headerSettingsToggle.setAttribute('aria-expanded', 'false');
+            };
+            if (headerSettingsToggle && headerSettingsMenu) {
+                headerSettingsToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isOpen = !headerSettingsMenu.hidden;
+                    headerSettingsMenu.hidden = isOpen;
+                    headerSettingsToggle.setAttribute('aria-expanded', String(!isOpen));
+                });
+                headerSettingsMenu.querySelectorAll('[data-settings-menu-close]').forEach((btn) => {
+                    btn.addEventListener('click', closeHeaderSettings);
+                });
+                document.addEventListener('click', (e) => {
+                    if (headerSettingsMenu.hidden) return;
+                    if (e.target.closest('.header-account-settings')) return;
+                    closeHeaderSettings();
+                });
+            }
             {% block domready %}
             {% endblock %}
         })

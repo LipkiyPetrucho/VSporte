@@ -1,0 +1,361 @@
+/* Account settings menu + preferences placeholders */
+
+.account-settings-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 12px 8px 8px;
+  margin: -8px 0 16px;
+}
+
+.account-settings-menu[hidden] {
+  display: none !important;
+}
+
+/* Desktop header dropdown */
+.header-account-settings {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.header-account-settings__toggle {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: #444;
+  font-size: 1.15rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.header-account-settings__toggle:hover,
+.header-account-settings__toggle[aria-expanded="true"] {
+  background: rgba(0, 0, 0, 0.06);
+  color: #12c064;
+}
+
+.account-settings-menu--dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 200;
+  width: min(360px, calc(100vw - 24px));
+  margin: 0;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+}
+
+.account-settings-menu--dropdown:not([hidden]) {
+  display: flex;
+}
+
+.account-settings-menu__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px 16px;
+}
+
+.account-settings-menu__profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.account-settings-menu__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.account-settings-menu__avatar--placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e8eaed;
+  color: #5f6368;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.account-settings-menu__profile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.account-settings-menu__username {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #222;
+}
+
+.account-settings-menu__profile-link {
+  font-size: 0.85rem;
+  color: #5f6368;
+  text-decoration: none;
+}
+
+.account-settings-menu__profile-link:hover {
+  color: #12c064;
+}
+
+.account-settings-menu__cancel {
+  border: none;
+  background: transparent;
+  color: #5f6368;
+  font-size: 0.95rem;
+  padding: 4px 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.account-settings-menu__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.account-settings-menu__list > li + li {
+  border-top: 1px solid #eee;
+}
+
+.account-settings-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 12px;
+  color: inherit;
+  text-decoration: none;
+  text-align: left;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.account-settings-menu__item:hover {
+  background: #f7f8fa;
+  color: inherit;
+}
+
+.account-settings-menu__item--placeholder {
+  opacity: 0.85;
+}
+
+.account-settings-menu__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.account-settings-menu__icon--privacy {
+  background: #d8f0e0;
+  color: #2e7d4f;
+}
+
+.account-settings-menu__icon--support {
+  background: #ebe4f5;
+  color: #5c5470;
+}
+
+.account-settings-menu__icon--logout {
+  background: #fde8e8;
+  color: #c62828;
+}
+
+.account-settings-menu__item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.account-settings-menu__item-title {
+  font-weight: 600;
+  font-size: 0.98rem;
+  color: #222;
+}
+
+.account-settings-menu__item-desc {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.account-settings-menu__chevron {
+  color: #bbb;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.account-settings-menu__logout-form {
+  margin: 0;
+}
+
+/* Preferences page */
+
+.preferences-page {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 4px 24px;
+}
+
+.preferences-page__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 4px 0 12px;
+}
+
+.preferences-page__back {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  text-decoration: none;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.preferences-page__back:hover {
+  background: #f3f4f6;
+  color: #12c064;
+}
+
+.preferences-page__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #222;
+  line-height: 1.3;
+}
+
+.preferences-page__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.preferences-page__list > li + li {
+  border-top: 1px solid #eee;
+}
+
+.preferences-page__item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.preferences-page__item:hover {
+  background: #f9fafb;
+  color: inherit;
+}
+
+.preferences-page__item--placeholder {
+  cursor: default;
+}
+
+.preferences-page__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.preferences-page__icon--interests {
+  background: #e6f6ea;
+  color: #2e9b57;
+}
+
+.preferences-page__icon--locations {
+  background: #e3f0ff;
+  color: #3b7dd8;
+}
+
+.preferences-page__icon--notifications {
+  background: #dff5f2;
+  color: #2a9b8f;
+}
+
+.preferences-page__icon--blocked {
+  background: #efe8f8;
+  color: #7b5ea7;
+}
+
+.preferences-page__icon--visibility {
+  background: #e3f0ff;
+  color: #3b7dd8;
+}
+
+.preferences-page__icon--policy,
+.preferences-page__icon--terms,
+.preferences-page__icon--password {
+  background: #eceff1;
+  color: #546e7a;
+}
+
+.preferences-page__icon--disable {
+  background: #fde8e8;
+  color: #c62828;
+}
+
+.preferences-page__item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.preferences-page__item-title {
+  font-weight: 600;
+  font-size: 0.98rem;
+  color: #222;
+}
+
+.preferences-page__item-desc {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.preferences-page__chevron {
+  color: #bbb;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+body.page-preferences #content {
+  padding-bottom: 88px;
+}

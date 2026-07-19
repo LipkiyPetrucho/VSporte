@@ -24,7 +24,7 @@
       <button type="button"
               class="dashboard-mobile-header__icon-btn"
               id="dashboard-menu-toggle"
-              aria-label="Меню"
+              aria-label="Настройки"
               aria-expanded="false"
               aria-controls="dashboard-menu">
         <i class="fas fa-bars"></i>
@@ -32,12 +32,9 @@
     </div>
   </header>
 
-  <nav class="dashboard-mobile-menu dashboard-home__compact-menu" id="dashboard-menu" hidden>
-    <a href="{% url 'dashboard' %}">Главная</a>
-    <a href="{% url 'games:list' %}">События</a>
-    <a href="{% url 'user_list' %}">Игроки</a>
-    <a href="{% url 'location:list' %}">Площадки</a>
-    <a href="{% url 'user_detail' request.user.username %}">Профиль</a>
+  {# Плейсхолдер: меню настроек аккаунта вместо навигации #}
+  <nav class="account-settings-menu dashboard-home__compact-menu" id="dashboard-menu" hidden aria-label="Настройки аккаунта">
+    {% include "includes/account_settings_menu.html" %}
   </nav>
 
   {% if next_game %}
@@ -91,11 +88,19 @@
 {% block domready %}
 const menuToggle = document.getElementById('dashboard-menu-toggle');
 const dashboardMenu = document.getElementById('dashboard-menu');
+const closeSettingsMenu = () => {
+    if (!dashboardMenu || !menuToggle) return;
+    dashboardMenu.hidden = true;
+    menuToggle.setAttribute('aria-expanded', 'false');
+};
 if (menuToggle && dashboardMenu) {
     menuToggle.addEventListener('click', () => {
         const isOpen = !dashboardMenu.hidden;
         dashboardMenu.hidden = isOpen;
         menuToggle.setAttribute('aria-expanded', String(!isOpen));
+    });
+    dashboardMenu.querySelectorAll('[data-settings-menu-close]').forEach((btn) => {
+        btn.addEventListener('click', closeSettingsMenu);
     });
 }
 {% endblock %}

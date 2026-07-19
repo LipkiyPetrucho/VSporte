@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Предпочтения и конфиденциальность{% endblock %}
+{% block body_class %} class="page-preferences has-mobile-bottom-nav"{% endblock %}
+
+{% block mobile_bottom_nav %}
+  {% include "includes/mobile_bottom_nav.html" with active="dashboard" %}
+{% endblock %}
+
+{% block content %}
+{# Плейсхолдер экрана предпочтений — пункты без реализации #}
+<div class="preferences-page">
+  <header class="preferences-page__header">
+    <a href="{% url 'dashboard' %}" class="preferences-page__back" aria-label="Назад">
+      <i class="fas fa-chevron-left" aria-hidden="true"></i>
+    </a>
+    <h1 class="preferences-page__title">Предпочтения и конфиденциальность</h1>
+  </header>
+
+  <ul class="preferences-page__list">
+    <li>
+      <a href="#" class="preferences-page__item preferences-page__item--placeholder">
+        <span class="preferences-page__icon preferences-page__icon--interests">
+          <i class="fas fa-futbol" aria-hidden="true"></i>
+        </span>
+        <span class="preferences-page__item-body">
+          <span class="preferences-page__item-title">Выбрать интересы</span>
+          <span class="preferences-page__item-desc">Используется для персонализации поиска</span>
+        </span>
+        <i class="fas fa-chevron-right preferences-page__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a href="#" class="preferences-page__item preferences-page__item--placeholder">
+        <span class="preferences-page__icon preferences-page__icon--locations">
+          <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+        </span>
+        <span class="preferences-page__item-body">
+          <span class="preferences-page__item-title">Локации</span>
+          <span class="preferences-page__item-desc">Управляйте своими локациями</span>
+        </span>
+        <i class="fas fa-chevron-right preferences-page__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a href="#" class="preferences-page__item preferences-page__item--placeholder">
+        <span class="preferences-page__icon preferences-page__icon--notifications">
+          <i class="fas fa-bell" aria-hidden="true"></i>
+        </span>
+        <span class="preferences-page__item-body">
+          <span class="preferences-page__item-title">Настройки уведомлений</span>
+          <span class="preferences-page__item-desc">Управляйте настройками уведомлений</span>
+        </span>
+        <i class="fas fa-chevron-right preferences-page__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a href="#" class="preferences-page__item preferences-page__item--placeholder">
+        <span class="preferences-page__icon preferences-page__icon--blocked">
+          <i class="fas fa-ban" aria-hidden="true"></i>
+        </span>
+        <span class="preferences-page__item-body">
+          <span class="preferences-page__item-title">Заблокированные пользователи</span>
+          <span class="preferences-page__item-desc">Управляйте заблокированными пользователями</span>
+        </span>
+        <i class="fas fa-chevron-right preferences-page__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a href="#" class="preferences-page__item preferences-page__item--placeholder">
+        <span class="preferences-page__icon preferences-page__icon--visibility">
+          <i class="fas fa-eye" aria-hidden="true"></i>
+        </span>
+        <span class="preferences-page__item-body">
+          <span class="preferences-page__item-title">Видимость контактов</span>
+          <span class="preferences-page__item-desc">Настройте видимость контактов</span>
+        </span>
+        <i class="fas fa-chevron-right preferences-page__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a href="#" class="preferences-page__item preferences-page__item--placeholder">
+        <span class="preferences-page__icon preferences-page__icon--policy">
+          <i class="fas fa-shield-alt" aria-hidden="true"></i>
+        </span>
+        <span class="preferences-page__item-body">
+          <span class="preferences-page__item-title">Политика конфиденциальности</span>
+          <span class="preferences-page__item-desc">Как JTeam собирает и использует ваши данные</span>
+        </span>
+        <i class="fas fa-chevron-right preferences-page__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a href="#" class="preferences-page__item preferences-page__item--placeholder">
+        <span class="preferences-page__icon preferences-page__icon--terms">
+          <i class="fas fa-file-alt" aria-hidden="true"></i>
+        </span>
+        <span class="preferences-page__item-body">
+          <span class="preferences-page__item-title">Условия использования</span>
+          <span class="preferences-page__item-desc">Как следует использовать JTeam</span>
+        </span>
+        <i class="fas fa-chevron-right preferences-page__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'password_change' %}" class="preferences-page__item">
+        <span class="preferences-page__icon preferences-page__icon--password">
+          <i class="fas fa-asterisk" aria-hidden="true"></i>
+        </span>
+        <span class="preferences-page__item-body">
+          <span class="preferences-page__item-title">Обновить пароль</span>
+          <span class="preferences-page__item-desc">Управляйте своим паролем</span>
+        </span>
+        <i class="fas fa-chevron-right preferences-page__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a href="#" class="preferences-page__item preferences-page__item--placeholder preferences-page__item--danger">
+        <span class="preferences-page__icon preferences-page__icon--disable">
+          <i class="fas fa-ban" aria-hidden="true"></i>
+        </span>
+        <span class="preferences-page__item-body">
+          <span class="preferences-page__item-title">Отключить аккаунт</span>
+          <span class="preferences-page__item-desc">Доступ к аккаунту будет отключен</span>
+        </span>
+        <i class="fas fa-chevron-right preferences-page__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+{% endblock %}

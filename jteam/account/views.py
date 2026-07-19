@@ -86,6 +86,16 @@ def dashboard(request):
     )
 
 
+@login_required
+def preferences(request):
+    """Плейсхолдер экрана предпочтений и конфиденциальности."""
+    return render(
+        request,
+        "account/preferences.html",
+        {"section": "preferences"},
+    )
+
+
 def register(request):
     if request.method == "POST":
         user_form = UserRegistrationForm(request.POST)
