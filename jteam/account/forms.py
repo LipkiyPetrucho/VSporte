@@ -1,8 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 
-from games.models import Game
-
+from .interests import INTEREST_CHOICES
 from .models import Profile
 
 
@@ -56,9 +55,17 @@ class UserEditForm(forms.ModelForm):
         return data
 
 
+class InterestsForm(forms.Form):
+    interests = forms.MultipleChoiceField(
+        choices=INTEREST_CHOICES,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+
+
 class ProfileEditForm(forms.ModelForm):
     interests = forms.MultipleChoiceField(
-        choices=Game.SPORTS,
+        choices=INTEREST_CHOICES,
         required=False,
         widget=forms.CheckboxSelectMultiple,
         label="",

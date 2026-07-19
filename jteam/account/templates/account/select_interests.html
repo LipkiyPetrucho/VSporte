@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Выберите ваши интересы{% endblock %}
+{% block body_class %} class="page-select-interests"{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/select-interests.css' %}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="select-interests">
+  <form method="post" class="select-interests__form" id="select-interests-form">
+    {% csrf_token %}
+
+    <header class="select-interests__header">
+      <button type="submit" class="select-interests__confirm">Подтвердить</button>
+      <h1 class="select-interests__title">Выберите ваши интересы</h1>
+      <p class="select-interests__subtitle">
+        Информация будет использована, чтобы подобрать вам подходящие мероприятия
+      </p>
+      <label class="select-interests__search">
+        <span class="visually-hidden">Поиск интересов</span>
+        <input type="search"
+               class="select-interests__search-input"
+               id="interests-search"
+               placeholder="Футбол"
+               autocomplete="off"
+               enterkeyhint="search">
+      </label>
+    </header>
+
+    <div class="select-interests__divider" aria-hidden="true"></div>
+
+    <div class="select-interests__body" id="interests-categories">
+      {% for category in categories %}
+        <section class="select-interests__category"
+                 data-category
+                 data-category-title="{{ category.title|lower }}">
+          <h2 class="select-interests__category-title">{{ category.title }}</h2>
+          <div class="select-interests__grid">
+            {% for item in category.items %}
+              <label class="select-interests__card{% if item.selected %} is-selected{% endif %}"
+                     data-interest-card
+                     data-interest-label="{{ item.label|lower }}">
+                <input type="checkbox"
+                       name="interests"
+                       value="{{ item.slug }}"
+                       class="select-interests__checkbox"
+                       {% if item.selected %}checked{% endif %}>
+                <span class="select-interests__card-icon" aria-hidden="true">
+                  <i class="fas {{ item.icon }}"></i>
+                </span>
+                <span class="select-interests__card-label">{{ item.label }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </section>
+      {% endfor %}
+      <p class="select-interests__empty" id="interests-empty" hidden>
+        Ничего не найдено
+      </p>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/select-interests.js' %}?v=1"></script>
+{% endblock %}

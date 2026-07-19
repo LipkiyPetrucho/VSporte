@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from games.models import Game
 
+from .interests import INTEREST_LABELS
 from .models import Friendship
 
 
@@ -143,7 +144,7 @@ def get_profile_stats(user):
     last_game = (
         games.filter(start_time__lte=now).order_by("-start_time").first()
     )
-    sport_labels = dict(Game.SPORTS)
+    sport_labels = {**dict(Game.SPORTS), **INTEREST_LABELS}
 
     if user.profile.interests:
         interests = [

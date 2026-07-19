@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block content %}
-{# Плейсхолдер экрана предпочтений — пункты без реализации #}
+{# Список настроек предпочтений и конфиденциальности #}
 <div class="preferences-page">
   <header class="preferences-page__header">
     <a href="{% url 'dashboard' %}" class="preferences-page__back" aria-label="Назад">
@@ -20,7 +20,7 @@
 
   <ul class="preferences-page__list">
     <li>
-      <a href="#" class="preferences-page__item preferences-page__item--placeholder">
+      <a href="{% url 'select_interests' %}" class="preferences-page__item">
         <span class="preferences-page__icon preferences-page__icon--interests">
           <i class="fas fa-futbol" aria-hidden="true"></i>
         </span>

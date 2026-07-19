@@ -10,8 +10,10 @@ from .forms import (
     UserRegistrationForm,
     UserEditForm,
     ProfileEditForm,
+    InterestsForm,
     SearchForm,
 )
+from .interests import INTEREST_CATEGORIES
 from .models import Profile, Contact, Friendship
 from actions.utils import create_action, get_user_activity
 from actions.models import Action
@@ -93,6 +95,50 @@ def preferences(request):
         request,
         "account/preferences.html",
         {"section": "preferences"},
+    )
+
+
+@login_required
+def select_interests(request):
+    """Экран выбора интересов пользователя."""
+    profile = request.user.profile
+    if request.method == "POST":
+        form = InterestsForm(request.POST)
+        if form.is_valid():
+            profile.interests = form.cleaned_data.get("interests", [])
+            profile.save(update_fields=["interests"])
+            messages.success(request, "Интересы сохранены")
+            return redirect("preferences")
+        messages.error(request, "Не удалось сохранить интересы")
+    else:
+        form = InterestsForm(initial={"interests": profile.interests or []})
+
+    selected = set(form["interests"].value() or [])
+    categories = []
+    for title, items in INTEREST_CATEGORIES:
+        categories.append(
+            {
+                "title": title,
+                "items": [
+                    {
+                        "slug": slug,
+                        "label": label,
+                        "icon": icon,
+                        "selected": slug in selected,
+                    }
+                    for slug, label, icon in items
+                ],
+            }
+        )
+
+    return render(
+        request,
+        "account/select_interests.html",
+        {
+            "section": "preferences",
+            "form": form,
+            "categories": categories,
+        },
     )
 
 

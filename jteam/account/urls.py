@@ -6,6 +6,11 @@ urlpatterns = [
     path("", include("django.contrib.auth.urls")),
     path("", views.dashboard, name="dashboard"),
     path("preferences/", views.preferences, name="preferences"),
+    path(
+        "preferences/interests/",
+        views.select_interests,
+        name="select_interests",
+    ),
     path("register/", views.register, name="register"),
     path("edit/", views.edit, name="edit"),
     path("users/", views.user_list, name="user_list"),
