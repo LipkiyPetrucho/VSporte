@@ -74,39 +74,18 @@
             return;
         }
 
-        if (!players.length && organizerUsername !== currentUsername) {
+        if (!players.length) {
             preview.innerHTML = '<p class="game-view-empty">Пока нет участников. Будьте первым!</p>';
             return;
         }
 
-        const rows = [];
-        const seen = new Set();
-
-        if (organizerUsername) {
-            const organizer = players.find(function (player) {
-                return player.username === organizerUsername;
-            });
-            const isCurrentOrganizer = organizerUsername === currentUsername;
-            rows.push(buildParticipantRow(
-                organizer || { username: organizerUsername, photo: null },
-                isCurrentOrganizer,
-                true
-            ));
-            seen.add(organizerUsername);
-        }
-
-        players.forEach(function (player) {
-            if (seen.has(player.username)) {
-                return;
-            }
-            rows.push(buildParticipantRow(
+        preview.innerHTML = players.map(function (player) {
+            return buildParticipantRow(
                 player,
                 player.username === currentUsername,
-                false
-            ));
-        });
-
-        preview.innerHTML = rows.join('');
+                player.username === organizerUsername
+            );
+        }).join('');
     }
 
     function playerProfileUrl(player) {

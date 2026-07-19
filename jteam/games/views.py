@@ -95,7 +95,7 @@ def _build_players_payload(game):
 
 
 def _participation_status_for_user(game, user):
-    if user in game.joined_players.all() or user == game.user:
+    if user in game.joined_players.all():
         return "joined"
     if GameInvitation.objects.filter(
         game=game,
@@ -208,8 +208,9 @@ def game_detail(request, id, slug):
     total_views = track_game_view(game.id)
     end_time = game.start_time + game.duration
     is_organizer = request.user.is_authenticated and request.user == game.user
-    is_joined = request.user.is_authenticated and (
-        request.user in game.joined_players.all() or is_organizer
+    is_joined = (
+        request.user.is_authenticated
+        and request.user in game.joined_players.all()
     )
     has_pending_request = False
     has_pending_invitation = False
@@ -387,12 +388,6 @@ def game_join(request):
         })
 
     if action == "join":
-        if request.user == game.user:
-            if request.user not in game.joined_players.all():
-                game.joined_players.add(request.user)
-                create_action(request.user, "присоединился(ась) к игре", game)
-            return _join_response(game, request.user)
-
         if request.user in game.joined_players.all():
             return JsonResponse({
                 "status": "error",
@@ -404,6 +399,12 @@ def game_join(request):
                 "status": "error",
                 "message": "Максимальное количество игроков достигнуто.",
             })
+
+        # Организатор может сразу войти в список участников без заявки.
+        if request.user == game.user:
+            game.joined_players.add(request.user)
+            create_action(request.user, "присоединился(ась) к игре", game)
+            return _join_response(game, request.user)
 
         if GameInvitation.objects.filter(
             game=game,
@@ -458,20 +459,18 @@ def game_join(request):
         return _join_response(game, request.user)
 
     if action == "leave":
-        if request.user == game.user:
-            game.joined_players.remove(request.user)
-        elif request.user in game.joined_players.all():
-            game.joined_players.remove(request.user)
+        if request.user not in game.joined_players.all():
+            return JsonResponse({
+                "status": "error",
+                "message": "Вы не участвуете в этой игре.",
+            })
+        game.joined_players.remove(request.user)
+        if request.user != game.user:
             GameParticipationRequest.objects.filter(
                 game=game,
                 user=request.user,
                 status=GameParticipationRequest.ACCEPTED,
             ).update(status=GameParticipationRequest.CANCELLED)
-        else:
-            return JsonResponse({
-                "status": "error",
-                "message": "Вы не участвуете в этой игре.",
-            })
         return _join_response(game, request.user)
 
     return JsonResponse({"status": "error"})

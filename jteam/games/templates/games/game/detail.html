@@ -19,37 +19,43 @@
      data-invite-url="{% url 'games:invite' %}"
      data-organizer-username="{{ game.user.username }}"
      data-current-username="{% if request.user.is_authenticated %}{{ request.user.username }}{% endif %}">
-  <header class="game-view-header">
-    <div class="game-view-topbar">
-      <a href="{% url 'games:list' %}" class="game-view-back" aria-label="Назад">
-        <i class="fas fa-chevron-left"></i>
-      </a>
-      <div class="game-view-menu">
-        <button type="button" class="game-view-menu-btn" id="game-view-menu-btn" aria-label="Меню">
-          <i class="fas fa-ellipsis-v"></i>
-        </button>
-        <div class="game-view-menu-dropdown" id="game-view-menu-dropdown">
-          {% if is_organizer and game.status == 'open' %}
-            <form action="{% url 'games:delete' game.id %}" method="post">
-              {% csrf_token %}
-              <button type="submit"
-                      class="danger"
-                      onclick="return confirm('Вы уверены, что хотите удалить эту игру?')">
-                Удалить игру
-              </button>
-            </form>
-          {% endif %}
-          <a href="{{ game.user.get_absolute_url }}">Профиль организатора</a>
+  <header class="game-view-header{% if game.image %} game-view-header--has-cover{% endif %}">
+    {% if game.image %}
+      <img src="{{ game.image.url }}" alt="" class="game-view-header-cover">
+      <div class="game-view-header-overlay" aria-hidden="true"></div>
+    {% endif %}
+    <div class="game-view-header-content">
+      <div class="game-view-topbar">
+        <a href="{% url 'games:list' %}" class="game-view-back" aria-label="Назад">
+          <i class="fas fa-chevron-left"></i>
+        </a>
+        <div class="game-view-menu">
+          <button type="button" class="game-view-menu-btn" id="game-view-menu-btn" aria-label="Меню">
+            <i class="fas fa-ellipsis-v"></i>
+          </button>
+          <div class="game-view-menu-dropdown" id="game-view-menu-dropdown">
+            {% if is_organizer and game.status == 'open' %}
+              <form action="{% url 'games:delete' game.id %}" method="post">
+                {% csrf_token %}
+                <button type="submit"
+                        class="danger"
+                        onclick="return confirm('Вы уверены, что хотите удалить эту игру?')">
+                  Удалить игру
+                </button>
+              </form>
+            {% endif %}
+            <a href="{{ game.user.get_absolute_url }}">Профиль организатора</a>
+          </div>
         </div>
       </div>
+      <h1 class="game-view-title">{{ game.get_sport_display }}</h1>
+      <p class="game-view-datetime">
+        {{ game.start_time|date:"H:i" }} - {{ end_time|date:"H:i" }} • {{ game.start_time|date:"j b Y" }}
+      </p>
+      <span id="game-header-status" class="game-view-status game-status status-{{ game.status }}">
+        {{ game.status|game_status_label }}
+      </span>
     </div>
-    <h1 class="game-view-title">{{ game.get_sport_display }}</h1>
-    <p class="game-view-datetime">
-      {{ game.start_time|date:"H:i" }} - {{ end_time|date:"H:i" }} • {{ game.start_time|date:"j b Y" }}
-    </p>
-    <span id="game-header-status" class="game-view-status game-status status-{{ game.status }}">
-      {{ game.status|game_status_label }}
-    </span>
   </header>
 
   <div class="game-view-layout">
@@ -58,9 +64,20 @@
         <i class="fas fa-map-marker-alt game-view-location-icon"></i>
         <div>
           <h2 class="game-view-location-name">{{ game.place }}</h2>
-          <p class="game-view-location-note">Возможно площадка еще не забронирована</p>
+          {% if game.place_reserved %}
+            <p class="game-view-location-note game-view-location-note--reserved">Площадка забронирована</p>
+          {% else %}
+            <p class="game-view-location-note">Возможно площадка еще не забронирована</p>
+          {% endif %}
         </div>
       </section>
+
+      {% if game.description %}
+        <section class="game-view-card">
+          <h2 class="game-view-card-title">Описание</h2>
+          <p class="game-view-description">{{ game.description|linebreaksbr }}</p>
+        </section>
+      {% endif %}
 
       <section class="game-view-card">
         <h2 class="game-view-card-title">Детали игры</h2>
@@ -98,39 +115,26 @@
         </div>
 
         <div id="participants-preview">
-          {% if is_organizer or game.joined_players.exists %}
-            {% if is_organizer %}
+          {% if game.joined_players.exists %}
+            {% for player in game.joined_players.all %}
               <div class="game-view-participant">
-                {% if request.user.profile.photo %}
-                  {% thumbnail request.user.profile.photo "42x42" crop="100%" as avatar %}
+                {% if player.profile.photo %}
+                  {% thumbnail player.profile.photo "42x42" crop="100%" as avatar %}
                   <img src="{{ avatar.url }}" alt="" class="game-view-participant-avatar">
                 {% else %}
-                  <span class="game-view-participant-avatar placeholder">{{ request.user.username.0|upper }}</span>
+                  <span class="game-view-participant-avatar placeholder">{{ player.username.0|upper }}</span>
                 {% endif %}
                 <div>
-                  <span class="game-view-participant-name">Вы</span>
-                  <span class="game-view-badge">Организатор</span>
+                  {% if player == request.user %}
+                    <span class="game-view-participant-name">Вы</span>
+                  {% else %}
+                    <a href="{{ player.get_absolute_url }}" class="game-view-participant-name">{{ player.username }}</a>
+                  {% endif %}
+                  {% if player == game.user %}
+                    <span class="game-view-badge">Организатор</span>
+                  {% endif %}
                 </div>
               </div>
-            {% endif %}
-            {% for player in game.joined_players.all %}
-              {% if player != game.user %}
-                <div class="game-view-participant">
-                  {% if player.profile.photo %}
-                    {% thumbnail player.profile.photo "42x42" crop="100%" as avatar %}
-                    <img src="{{ avatar.url }}" alt="" class="game-view-participant-avatar">
-                  {% else %}
-                    <span class="game-view-participant-avatar placeholder">{{ player.username.0|upper }}</span>
-                  {% endif %}
-                  <div>
-                    {% if player == request.user %}
-                      <span class="game-view-participant-name">Вы</span>
-                    {% else %}
-                      <a href="{{ player.get_absolute_url }}" class="game-view-participant-name">{{ player.username }}</a>
-                    {% endif %}
-                  </div>
-                </div>
-              {% endif %}
             {% endfor %}
           {% else %}
             <p class="game-view-empty">Пока нет участников. Будьте первым!</p>

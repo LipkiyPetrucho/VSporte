@@ -75,7 +75,9 @@ class ProfileEditForm(forms.ModelForm):
                     "id": "profile-photo-input",
                 }
             ),
-            "gender": forms.Select(attrs={"class": "profile-edit__gender-select"}),
+            "gender": forms.Select(
+                attrs={"class": "profile-edit__input profile-edit__select"}
+            ),
             "bio": forms.Textarea(
                 attrs={
                     "class": "profile-edit__textarea",
@@ -90,6 +92,9 @@ class ProfileEditForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["gender"].choices = [("", "Не указан")] + list(
+            Profile.GENDER_CHOICES
+        )
         if self.instance.pk:
             self.fields["interests"].initial = self.instance.interests or []
 

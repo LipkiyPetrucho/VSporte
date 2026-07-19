@@ -108,21 +108,9 @@
 
     <h2 class="profile-edit__section-title">Личная информация</h2>
     <div class="profile-edit__fields">
-      <div class="profile-edit__field profile-edit__field--gender">
-        <div class="profile-edit__gender-main">
-          <span class="profile-edit__label">Пол</span>
-          <span class="profile-edit__gender-value" id="profile-gender-value">
-            {% if request.user.profile.gender %}
-              {{ request.user.profile.get_gender_display }}
-            {% else %}
-              Не указан
-            {% endif %}
-          </span>
-          {{ profile_form.gender }}
-        </div>
-        <button type="button" class="profile-edit__gender-select-btn" id="profile-gender-btn">
-          Выбрать
-        </button>
+      <div class="profile-edit__field">
+        <label class="profile-edit__label" for="{{ profile_form.gender.id_for_label }}">Пол</label>
+        {{ profile_form.gender }}
       </div>
 
       <div class="profile-edit__field">

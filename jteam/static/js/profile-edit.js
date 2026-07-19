@@ -29,32 +29,4 @@
             reader.readAsDataURL(file);
         });
     }
-
-    const genderSelect = document.getElementById('id_gender');
-    const genderValue = document.getElementById('profile-gender-value');
-    const genderBtn = document.getElementById('profile-gender-btn');
-
-    function updateGenderLabel() {
-        if (!genderSelect || !genderValue) {
-            return;
-        }
-        const option = genderSelect.options[genderSelect.selectedIndex];
-        genderValue.textContent = option && option.value ? option.textContent : 'Не указан';
-    }
-
-    if (genderSelect) {
-        updateGenderLabel();
-        genderSelect.addEventListener('change', updateGenderLabel);
-    }
-
-    if (genderBtn && genderSelect) {
-        genderBtn.addEventListener('click', function () {
-            genderSelect.focus();
-            if (typeof genderSelect.showPicker === 'function') {
-                genderSelect.showPicker();
-            } else {
-                genderSelect.click();
-            }
-        });
-    }
 })();
