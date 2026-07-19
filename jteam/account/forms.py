@@ -92,9 +92,8 @@ class ProfileEditForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["gender"].choices = [("", "Не указан")] + list(
-            Profile.GENDER_CHOICES
-        )
+        # Model choices already include the blank "Не указан" option.
+        self.fields["gender"].choices = list(Profile.GENDER_CHOICES)
         if self.instance.pk:
             self.fields["interests"].initial = self.instance.interests or []
 
