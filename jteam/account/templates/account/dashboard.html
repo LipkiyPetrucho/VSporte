@@ -45,7 +45,7 @@
       <span class="dashboard-mobile-next-game__label">Ближайшая игра</span>
       <span class="dashboard-mobile-next-game__title">{{ next_game.get_sport_display|capfirst }}</span>
       <span class="dashboard-mobile-next-game__meta">
-        {{ next_game.start_time|date:"M j, l" }} | {{ next_game.start_time|time:"g:i A" }}
+        {{ next_game.start_time|date:"M j, l" }} | {{ next_game.start_time|time:"H:i" }}
       </span>
     </a>
   {% else %}
