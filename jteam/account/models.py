@@ -29,6 +29,15 @@ class Profile(models.Model):
     bio = models.TextField(blank=True)
     show_email = models.BooleanField(default=True)
     interests = models.JSONField(default=list, blank=True)
+    location_title = models.CharField(max_length=255, blank=True)
+    location_address = models.CharField(max_length=512, blank=True)
+    location_latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    location_longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    recent_locations = models.JSONField(default=list, blank=True)
 
     def __str__(self):
         return f"Profile of {self.user.username}"
@@ -76,6 +85,35 @@ class Friendship(models.Model):
         return f"{self.from_user} -> {self.to_user} ({self.status})"
 
 
+class UserBlock(models.Model):
+    blocker = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="blocks_sent",
+        on_delete=models.CASCADE,
+    )
+    blocked = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="blocks_received",
+        on_delete=models.CASCADE,
+    )
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["blocker", "blocked"],
+                name="unique_user_block",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["-created"]),
+        ]
+        ordering = ["-created"]
+
+    def __str__(self):
+        return f"{self.blocker} blocked {self.blocked}"
+
+
 class Contact(models.Model):
     user_from = models.ForeignKey(
         "auth.User", related_name="rel_from_set", on_delete=models.CASCADE
@@ -101,5 +139,15 @@ user_model.add_to_class(
     "following",
     models.ManyToManyField(
         "self", through=Contact, related_name="followers", symmetrical=False
+    ),
+)
+user_model.add_to_class(
+    "blocking",
+    models.ManyToManyField(
+        "self",
+        through=UserBlock,
+        through_fields=("blocker", "blocked"),
+        related_name="blocked_by",
+        symmetrical=False,
     ),
 )

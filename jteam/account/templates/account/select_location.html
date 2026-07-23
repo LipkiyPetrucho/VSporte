@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Адрес{% endblock %}
+{% block body_class %} class="page-select-location"{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/select-location.css' %}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="select-location"
+     id="select-location"
+     data-suggest-url="{% url 'location:api_suggest' %}"
+     data-geocode-url="{% url 'location:api_geocode' %}"
+     data-save-url="{% url 'save_location' %}"
+     data-delete-url="{% url 'delete_recent_location' %}"
+     data-cancel-url="{% url 'preferences' %}">
+
+  <header class="select-location__header">
+    <h1 class="select-location__title">Адрес</h1>
+    <a href="{% url 'preferences' %}" class="select-location__cancel">Отмена</a>
+  </header>
+
+  <div class="select-location__search-wrap">
+    <label class="select-location__search">
+      <span class="visually-hidden">Поиск адреса</span>
+      <input type="search"
+             class="select-location__search-input"
+             id="location-search"
+             placeholder="Футбольная арена"
+             autocomplete="off"
+             enterkeyhint="search"
+             value="{% if current_location %}{{ current_location.title }}{% endif %}">
+      <button type="button"
+              class="select-location__clear"
+              id="location-search-clear"
+              aria-label="Очистить"
+              {% if not current_location %}hidden{% endif %}>
+        <i class="fas fa-times" aria-hidden="true"></i>
+      </button>
+    </label>
+  </div>
+
+  <section class="select-location__section" id="location-suggestions-section" hidden>
+    <h2 class="select-location__section-title">Результаты</h2>
+    <ul class="select-location__list" id="location-suggestions"></ul>
+  </section>
+
+  <section class="select-location__section" id="location-recent-section"
+           {% if not recent_locations %}hidden{% endif %}>
+    <h2 class="select-location__section-title">Недавние места</h2>
+    <ul class="select-location__list" id="location-recent-list">
+      {% for item in recent_locations %}
+        <li class="select-location__item"
+            data-recent-item
+            data-id="{{ item.id }}"
+            data-title="{{ item.title }}"
+            data-address="{{ item.address }}"
+            {% if item.uri %}data-uri="{{ item.uri }}"{% endif %}
+            {% if item.latitude is not None %}data-latitude="{{ item.latitude }}"{% endif %}
+            {% if item.longitude is not None %}data-longitude="{{ item.longitude }}"{% endif %}>
+          <button type="button" class="select-location__item-main" data-select-location>
+            <span class="select-location__item-title">{{ item.title }}</span>
+            {% if item.address and item.address != item.title %}
+              <span class="select-location__item-address">{{ item.address }}</span>
+            {% endif %}
+          </button>
+          <button type="button"
+                  class="select-location__item-delete"
+                  data-delete-location
+                  aria-label="Удалить">
+            <i class="fas fa-times" aria-hidden="true"></i>
+          </button>
+        </li>
+      {% endfor %}
+    </ul>
+    <p class="select-location__empty" id="location-recent-empty" hidden>
+      Нет недавних мест
+    </p>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/select-location.js' %}?v=1"></script>
+{% endblock %}

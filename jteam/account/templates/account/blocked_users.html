@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load static thumbnail %}
+
+{% block title %}Заблокированные пользователи{% endblock %}
+{% block body_class %} class="page-blocked-users has-mobile-bottom-nav"{% endblock %}
+
+{% block mobile_bottom_nav %}
+  {% include "includes/mobile_bottom_nav.html" with active="dashboard" %}
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/blocked-users.css' %}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="blocked-users"
+     id="blocked-users"
+     data-block-url="{% url 'user_block' %}">
+  <header class="blocked-users__header">
+    <a href="{% url 'preferences' %}" class="blocked-users__back" aria-label="Назад">
+      <i class="fas fa-chevron-left" aria-hidden="true"></i>
+    </a>
+    <h1 class="blocked-users__title">Заблокированные пользователи</h1>
+  </header>
+
+  {% if blocked_users %}
+    <ul class="blocked-users__list">
+      {% for user in blocked_users %}
+        <li class="blocked-users__item" data-blocked-user data-id="{{ user.id }}">
+          <a href="{% url 'user_detail' user.username %}" class="blocked-users__link">
+            {% if user.profile.photo %}
+              {% thumbnail user.profile.photo "80x80" crop="100%" as avatar %}
+              <img src="{{ avatar.url }}" alt="" class="blocked-users__avatar">
+            {% else %}
+              <span class="blocked-users__avatar blocked-users__avatar--placeholder">
+                {{ user.username.0|upper }}
+              </span>
+            {% endif %}
+            <span class="blocked-users__meta">
+              <span class="blocked-users__name">
+                {{ user.get_full_name|default:user.username }}
+              </span>
+              <span class="blocked-users__username">@{{ user.username }}</span>
+            </span>
+          </a>
+          <button type="button"
+                  class="blocked-users__unblock"
+                  data-unblock
+                  data-id="{{ user.id }}">
+            Разблокировать
+          </button>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="blocked-users__empty" id="blocked-users-empty">
+      Нет заблокированных пользователей
+    </p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/blocked-users.js' %}?v=1"></script>
+{% endblock %}

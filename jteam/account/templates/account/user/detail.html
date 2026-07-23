@@ -2,10 +2,10 @@
 {% load static thumbnail %}
 
 {% block title %}Профиль{% endblock %}
-{% block body_class %} class="page-profile{% if is_own_profile %} has-mobile-bottom-nav{% endif %}"{% if not is_own_profile %} data-friendship-url="{% url 'user_friendship' %}"{% endif %}{% endblock %}
+{% block body_class %} class="page-profile{% if is_own_profile %} has-mobile-bottom-nav{% endif %}"{% if not is_own_profile %} data-friendship-url="{% url 'user_friendship' %}" data-block-url="{% url 'user_block' %}"{% endif %}{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/user-profile.css' %}">
+<link rel="stylesheet" href="{% static 'css/user-profile.css' %}?v=2">
 {% endblock %}
 
 {% block mobile_bottom_nav %}
@@ -17,8 +17,43 @@
 {% block content %}
 <div class="profile-page">
   <header class="profile-page__header">
-    <h1 class="profile-page__title">Профиль</h1>
-    {% if is_own_profile %}
+    {% if not is_own_profile %}
+      <a href="{% url 'user_list' %}" class="profile-page__back" aria-label="Назад">
+        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+      </a>
+      <h1 class="profile-page__title">Профиль пользователя</h1>
+      <div class="profile-page__menu" data-profile-menu>
+        <button type="button"
+                class="profile-page__menu-toggle"
+                aria-label="Действия"
+                aria-expanded="false"
+                aria-controls="profile-actions-menu"
+                data-profile-menu-toggle>
+          <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+        </button>
+        <div class="profile-page__menu-dropdown" id="profile-actions-menu" hidden>
+          <button type="button" class="profile-page__menu-item" data-report-user disabled>
+            Пожаловаться на пользователя
+          </button>
+          {% if is_blocked %}
+            <button type="button"
+                    class="profile-page__menu-item"
+                    data-block-action="unblock"
+                    data-id="{{ user.id }}">
+              Разблокировать
+            </button>
+          {% else %}
+            <button type="button"
+                    class="profile-page__menu-item profile-page__menu-item--danger"
+                    data-block-action="block"
+                    data-id="{{ user.id }}">
+              Заблокировать
+            </button>
+          {% endif %}
+        </div>
+      </div>
+    {% else %}
+      <h1 class="profile-page__title">Профиль</h1>
       <a href="{% url 'edit' %}" class="profile-page__edit-btn" aria-label="Редактировать профиль">
         <i class="fas fa-pencil-alt" aria-hidden="true"></i>
       </a>
@@ -52,7 +87,12 @@
 
     <div class="profile-page__name-row">
       <p class="profile-page__fullname">{{ user.get_full_name|default:user.username }}</p>
-      {% if is_own_profile %}
+      {% if user.profile.location_title %}
+        <span class="profile-page__location">
+          <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+          <span>{{ user.profile.location_title }}</span>
+        </span>
+      {% elif is_own_profile %}
         <span class="profile-page__location">
           <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
           <span data-city-label></span>
@@ -111,7 +151,7 @@
       {% if user.profile.bio %}
         <p class="profile-page__bio-text">{{ user.profile.bio }}</p>
       {% else %}
-        <p class="profile-page__empty-text">Пока ничего не написано</p>
+        <p class="profile-page__empty-text">Пусто</p>
       {% endif %}
     </div>
   </section>
@@ -129,7 +169,7 @@
     {% endif %}
   </section>
 
-  {% if not is_own_profile %}
+  {% if not is_own_profile and not is_blocked %}
     <div class="profile-page__actions" data-friendship-action data-user-id="{{ user.id }}">
       {% if friendship == "pending_sent" %}
         <span class="profile-page__pending">Заявка отправлена</span>
@@ -156,12 +196,16 @@
         </button>
       {% endif %}
     </div>
+  {% elif not is_own_profile and is_blocked %}
+    <div class="profile-page__actions">
+      <p class="profile-page__blocked-note">Пользователь заблокирован</p>
+    </div>
   {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
   {% if not is_own_profile %}
-    <script src="{% static 'js/user-profile.js' %}"></script>
+    <script src="{% static 'js/user-profile.js' %}?v=2"></script>
   {% endif %}
 {% endblock %}

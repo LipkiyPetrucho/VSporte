@@ -1,0 +1,235 @@
+/* Select living location page */
+
+body.page-select-location #content {
+  padding: 0;
+  background: #fff;
+}
+
+body.page-select-location ul.messages {
+  margin: 10px 16px;
+  padding: 0;
+}
+
+.select-location {
+  max-width: 560px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: #fff;
+  padding: 0 0 32px;
+}
+
+.select-location__header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 20px 10px;
+  min-height: 48px;
+}
+
+.select-location__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #2c2c2c;
+  line-height: 1.3;
+}
+
+.select-location__cancel {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  color: #8a8a8a;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 6px 4px;
+}
+
+.select-location__cancel:hover {
+  color: #12c064;
+}
+
+.select-location__search-wrap {
+  padding: 8px 16px 4px;
+}
+
+.select-location__search {
+  position: relative;
+  display: block;
+}
+
+.select-location__search-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 12px;
+  background: #f2f2f2;
+  color: #333;
+  font-size: 1rem;
+  padding: 14px 44px 14px 16px;
+  outline: none;
+}
+
+.select-location__search-input::placeholder {
+  color: #b0b0b0;
+}
+
+.select-location__search-input:focus {
+  box-shadow: 0 0 0 2px rgba(59, 125, 216, 0.25);
+}
+
+.select-location__clear {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: #cfcfcf;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0;
+}
+
+.select-location__clear:hover {
+  background: #bdbdbd;
+}
+
+.select-location__section {
+  padding: 18px 16px 0;
+}
+
+.select-location__section[hidden] {
+  display: none;
+}
+
+.select-location__section-title {
+  margin: 0 4px 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2c2c2c;
+}
+
+.select-location__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.select-location__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 4px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.select-location__item:last-child {
+  border-bottom: none;
+}
+
+.select-location__item-main {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.select-location__item-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #2c2c2c;
+  line-height: 1.3;
+}
+
+.select-location__item-address {
+  font-size: 0.82rem;
+  color: #9a9a9a;
+  line-height: 1.35;
+}
+
+.select-location__item-main:hover .select-location__item-title {
+  color: #12c064;
+}
+
+.select-location__item-delete {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin-top: 2px;
+  border: none;
+  background: transparent;
+  color: #e57373;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.select-location__item-delete:hover {
+  background: #fdeaea;
+  color: #c62828;
+}
+
+.select-location__empty {
+  margin: 8px 4px 0;
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 768px) {
+  body.page-select-location #header {
+    display: none;
+  }
+
+  body.page-select-location #content {
+    padding: 0;
+  }
+}
+
+@media (min-width: 769px) {
+  body.page-select-location #content {
+    padding: 24px 16px 32px;
+    background: #f3f4f6;
+  }
+
+  .select-location {
+    min-height: auto;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .select-location__cancel {
+    color: #3b7dd8;
+  }
+}

@@ -7,7 +7,53 @@ from django.utils import timezone
 from games.models import Game
 
 from .interests import INTEREST_LABELS
-from .models import Friendship
+from .models import Contact, Friendship, Profile, UserBlock
+
+
+def ensure_profile(user):
+    """Гарантирует наличие Profile у пользователя."""
+    profile, _ = Profile.objects.get_or_create(user=user)
+    return profile
+
+
+def is_blocked(blocker, blocked):
+    if not blocker or not blocked or blocker.pk == blocked.pk:
+        return False
+    return UserBlock.objects.filter(blocker=blocker, blocked=blocked).exists()
+
+
+def get_blocked_user_ids(user):
+    return set(
+        UserBlock.objects.filter(blocker=user).values_list("blocked_id", flat=True)
+    )
+
+
+def block_user(blocker, blocked):
+    if blocker.pk == blocked.pk:
+        return False
+
+    UserBlock.objects.get_or_create(blocker=blocker, blocked=blocked)
+    Friendship.objects.filter(
+        Q(from_user=blocker, to_user=blocked) | Q(from_user=blocked, to_user=blocker)
+    ).delete()
+    Contact.objects.filter(
+        Q(user_from=blocker, user_to=blocked) | Q(user_from=blocked, user_to=blocker)
+    ).delete()
+    return True
+
+
+def unblock_user(blocker, blocked):
+    deleted, _ = UserBlock.objects.filter(blocker=blocker, blocked=blocked).delete()
+    return deleted > 0
+
+
+def get_blocked_users(user):
+    blocked_ids = get_blocked_user_ids(user)
+    return (
+        User.objects.filter(pk__in=blocked_ids, is_active=True)
+        .select_related("profile")
+        .order_by("username")
+    )
 
 
 def search_users(query):
@@ -139,6 +185,7 @@ def get_outgoing_friend_requests(user):
 
 
 def get_profile_stats(user):
+    profile = ensure_profile(user)
     games = get_user_games(user)
     now = timezone.now()
     last_game = (
@@ -146,10 +193,10 @@ def get_profile_stats(user):
     )
     sport_labels = {**dict(Game.SPORTS), **INTEREST_LABELS}
 
-    if user.profile.interests:
+    if profile.interests:
         interests = [
             sport_labels.get(sport, sport)
-            for sport in user.profile.interests
+            for sport in profile.interests
             if sport in sport_labels
         ]
     else:

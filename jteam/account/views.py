@@ -4,7 +4,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.urls import reverse
 from django.views.decorators.http import require_POST
+import json
 from .forms import (
     LoginForm,
     UserRegistrationForm,
@@ -14,6 +16,11 @@ from .forms import (
     SearchForm,
 )
 from .interests import INTEREST_CATEGORIES
+from .location_service import (
+    delete_recent_location,
+    get_current_location,
+    set_living_location,
+)
 from .models import Profile, Contact, Friendship
 from actions.utils import create_action, get_user_activity
 from actions.models import Action
@@ -29,6 +36,12 @@ from .service import (
     get_profile_stats,
     get_incoming_friend_requests,
     get_outgoing_friend_requests,
+    ensure_profile,
+    is_blocked,
+    block_user,
+    unblock_user,
+    get_blocked_users,
+    get_blocked_user_ids,
 )
 
 
@@ -142,6 +155,80 @@ def select_interests(request):
     )
 
 
+@login_required
+def select_location(request):
+    """Экран выбора локации проживания."""
+    profile = request.user.profile
+    return render(
+        request,
+        "account/select_location.html",
+        {
+            "section": "preferences",
+            "current_location": get_current_location(profile),
+            "recent_locations": profile.recent_locations or [],
+        },
+    )
+
+
+@login_required
+@require_POST
+def save_location(request):
+    """Сохраняет выбранную локацию проживания."""
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({"status": "error", "error": "invalid_json"}, status=400)
+
+    location = set_living_location(request.user.profile, payload)
+    if not location:
+        return JsonResponse({"status": "error", "error": "invalid_location"}, status=400)
+
+    city = None
+    lat = location.get("latitude")
+    lon = location.get("longitude")
+    if lat is not None and lon is not None:
+        try:
+            from location.city_detection import GeocoderUnavailableError, detect_city
+
+            detected = detect_city(lat, lon)
+            city = detected.get("city")
+            if not city and detected.get("detected_name"):
+                city = {"name": detected["detected_name"], "slug": None}
+        except GeocoderUnavailableError:
+            city = None
+
+    return JsonResponse(
+        {
+            "status": "ok",
+            "location": location,
+            "recent_locations": request.user.profile.recent_locations or [],
+            "city": city,
+            "redirect_url": reverse("preferences"),
+        }
+    )
+
+
+@login_required
+@require_POST
+def delete_recent_location_view(request):
+    """Удаляет адрес из списка недавних мест."""
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({"status": "error", "error": "invalid_json"}, status=400)
+
+    location_id = payload.get("id")
+    if not delete_recent_location(request.user.profile, location_id):
+        return JsonResponse({"status": "error", "error": "not_found"}, status=404)
+
+    return JsonResponse(
+        {
+            "status": "ok",
+            "recent_locations": request.user.profile.recent_locations or [],
+        }
+    )
+
+
 def register(request):
     if request.method == "POST":
         user_form = UserRegistrationForm(request.POST)
@@ -196,9 +283,11 @@ def edit(request):
 
 @login_required
 def user_list(request):
+    blocked_ids = get_blocked_user_ids(request.user)
     users = (
         User.objects.filter(is_active=True)
         .exclude(pk=request.user.pk)
+        .exclude(pk__in=blocked_ids)
         .select_related("profile")
         .order_by("username")
     )
@@ -256,10 +345,19 @@ def user_list(request):
 
 @login_required
 def user_detail(request, username):
-    user = get_object_or_404(
-        User.objects.select_related("profile"), username=username, is_active=True
-    )
+    user = get_object_or_404(User, username=username, is_active=True)
+    ensure_profile(user)
+    user = User.objects.select_related("profile").get(pk=user.pk)
+
     is_own_profile = request.user == user
+    viewer_blocked = False
+    if not is_own_profile:
+        # Не показывать профиль, если этот пользователь заблокировал текущего
+        if is_blocked(user, request.user):
+            messages.error(request, "Профиль недоступен")
+            return redirect("user_list")
+        viewer_blocked = is_blocked(request.user, user)
+
     profile_stats = get_profile_stats(user)
     context = {
         "section": "people",
@@ -267,10 +365,50 @@ def user_detail(request, username):
         "is_own_profile": is_own_profile,
         "profile_stats": profile_stats,
         "activity_items": get_user_activity(user),
+        "is_blocked": viewer_blocked,
     }
     if not is_own_profile:
         context["friendship"] = get_friendship_status(request.user, user)
     return render(request, "account/user/detail.html", context)
+
+
+@require_POST
+@login_required
+def user_block(request):
+    user_id = request.POST.get("id")
+    action = request.POST.get("action")
+    if not user_id or action not in ("block", "unblock"):
+        return JsonResponse({"status": "error"})
+
+    try:
+        other = User.objects.get(id=user_id, is_active=True)
+    except User.DoesNotExist:
+        return JsonResponse({"status": "error"})
+
+    if other == request.user:
+        return JsonResponse({"status": "error"})
+
+    if action == "block":
+        block_user(request.user, other)
+        blocked = True
+    else:
+        unblock_user(request.user, other)
+        blocked = False
+
+    return JsonResponse({"status": "ok", "blocked": blocked})
+
+
+@login_required
+def blocked_users(request):
+    users = get_blocked_users(request.user)
+    return render(
+        request,
+        "account/blocked_users.html",
+        {
+            "section": "preferences",
+            "blocked_users": users,
+        },
+    )
 
 
 @require_POST
@@ -288,6 +426,9 @@ def user_friendship(request):
 
     if other == request.user:
         return JsonResponse({"status": "error"})
+
+    if is_blocked(request.user, other) or is_blocked(other, request.user):
+        return JsonResponse({"status": "error", "error": "blocked"})
 
     if action == "request":
         friendship, created = Friendship.objects.get_or_create(
