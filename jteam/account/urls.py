@@ -37,6 +37,16 @@ urlpatterns = [
         views.blocked_users,
         name="blocked_users",
     ),
+    path(
+        "preferences/notifications/",
+        views.notification_settings,
+        name="notification_settings",
+    ),
+    path(
+        "preferences/notifications/update/",
+        views.update_notification_setting,
+        name="update_notification_setting",
+    ),
     path("users/<username>/", views.user_detail, name="user_detail"),
     path("search/", views.account_search, name="account_search"),
     # path('results/', views.search_results, name='search_results'),

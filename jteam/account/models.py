@@ -38,6 +38,17 @@ class Profile(models.Model):
         max_digits=9, decimal_places=6, null=True, blank=True
     )
     recent_locations = models.JSONField(default=list, blank=True)
+    notify_game_reminders = models.BooleanField(default=True)
+    notify_chat_messages = models.BooleanField(default=True)
+    notify_activity_updates = models.BooleanField(default=True)
+    notify_social_updates = models.BooleanField(default=True)
+
+    NOTIFICATION_PREF_FIELDS = (
+        "notify_game_reminders",
+        "notify_chat_messages",
+        "notify_activity_updates",
+        "notify_social_updates",
+    )
 
     def __str__(self):
         return f"Profile of {self.user.username}"

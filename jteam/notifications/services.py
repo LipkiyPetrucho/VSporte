@@ -18,6 +18,17 @@ GAME_NOTIFICATION_TYPES = {
     Notification.TYPE_GAME_PARTICIPATION_REJECTED,
 }
 
+# Категории настроек → существующие типы in-app уведомлений.
+# Напоминания об играх и сообщения в чатах пока без бэкенда-источников.
+NOTIFICATION_TYPE_PREF_FIELD = {
+    Notification.TYPE_FRIENDSHIP_REQUEST: "notify_social_updates",
+    Notification.TYPE_FRIENDSHIP_ACCEPTED: "notify_social_updates",
+    Notification.TYPE_GAME_PARTICIPATION_REQUEST: "notify_activity_updates",
+    Notification.TYPE_GAME_INVITATION: "notify_activity_updates",
+    Notification.TYPE_GAME_PARTICIPATION_ACCEPTED: "notify_activity_updates",
+    Notification.TYPE_GAME_PARTICIPATION_REJECTED: "notify_activity_updates",
+}
+
 
 def _actor_display_name(user):
     return user.get_full_name() or user.username
@@ -79,8 +90,21 @@ def get_notification_url(notification):
     return reverse("dashboard")
 
 
+def _recipient_allows_notification(recipient, notification_type):
+    pref_field = NOTIFICATION_TYPE_PREF_FIELD.get(notification_type)
+    if not pref_field:
+        return True
+    profile = getattr(recipient, "profile", None)
+    if profile is None:
+        return True
+    return bool(getattr(profile, pref_field, True))
+
+
 def create_notification(recipient, actor, notification_type, target):
     if recipient == actor:
+        return None
+
+    if not _recipient_allows_notification(recipient, notification_type):
         return None
 
     now = timezone.now()

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Настройки уведомлений{% endblock %}
+{% block body_class %} class="page-notification-settings has-mobile-bottom-nav"{% endblock %}
+
+{% block mobile_bottom_nav %}
+  {% include "includes/mobile_bottom_nav.html" with active="dashboard" %}
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/notification-settings.css' %}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="notification-settings"
+     id="notification-settings"
+     data-update-url="{% url 'update_notification_setting' %}">
+  <header class="notification-settings__header">
+    <a href="{% url 'preferences' %}" class="notification-settings__back" aria-label="Назад">
+      <i class="fas fa-chevron-left" aria-hidden="true"></i>
+    </a>
+    <h1 class="notification-settings__title">Настройки уведомлений</h1>
+  </header>
+
+  <p class="notification-settings__intro">
+    Выберите, какие уведомления JTeam может отправлять, чтобы вы не пропускали
+    игры, чаты и активность игроков.
+  </p>
+
+  <ul class="notification-settings__list">
+    {% for setting in notification_settings %}
+      <li class="notification-settings__item">
+        <span class="notification-settings__label" id="label-{{ setting.key }}">
+          {{ setting.label }}
+        </span>
+        <label class="notification-settings__toggle">
+          <input type="checkbox"
+                 class="notification-settings__toggle-input"
+                 data-setting-key="{{ setting.key }}"
+                 aria-labelledby="label-{{ setting.key }}"
+                 {% if setting.enabled %}checked{% endif %}>
+          <span class="notification-settings__toggle-slider" aria-hidden="true"></span>
+        </label>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/notification-settings.js' %}?v=1"></script>
+{% endblock %}

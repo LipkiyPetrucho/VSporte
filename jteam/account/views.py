@@ -411,6 +411,57 @@ def blocked_users(request):
     )
 
 
+NOTIFICATION_SETTING_OPTIONS = (
+    ("notify_game_reminders", "Напоминания об играх"),
+    ("notify_chat_messages", "Сообщения в чатах игр"),
+    ("notify_activity_updates", "Обновления активности"),
+    ("notify_social_updates", "Социальные обновления"),
+)
+
+
+@login_required
+def notification_settings(request):
+    profile = ensure_profile(request.user)
+    settings_list = [
+        {
+            "key": key,
+            "label": label,
+            "enabled": getattr(profile, key, True),
+        }
+        for key, label in NOTIFICATION_SETTING_OPTIONS
+    ]
+    return render(
+        request,
+        "account/notification_settings.html",
+        {
+            "section": "preferences",
+            "notification_settings": settings_list,
+        },
+    )
+
+
+@require_POST
+@login_required
+def update_notification_setting(request):
+    profile = ensure_profile(request.user)
+    key = request.POST.get("key")
+    allowed = {field for field, _label in NOTIFICATION_SETTING_OPTIONS}
+    if key not in allowed:
+        return JsonResponse({"status": "error", "error": "invalid_key"}, status=400)
+
+    raw_value = request.POST.get("enabled", "").lower()
+    if raw_value in ("1", "true", "on", "yes"):
+        enabled = True
+    elif raw_value in ("0", "false", "off", "no"):
+        enabled = False
+    else:
+        return JsonResponse({"status": "error", "error": "invalid_value"}, status=400)
+
+    setattr(profile, key, enabled)
+    profile.save(update_fields=[key])
+    return JsonResponse({"status": "ok", "key": key, "enabled": enabled})
+
+
 @require_POST
 @login_required
 def user_friendship(request):
