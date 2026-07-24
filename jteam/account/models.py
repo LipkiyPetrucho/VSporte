@@ -28,6 +28,8 @@ class Profile(models.Model):
     )
     bio = models.TextField(blank=True)
     show_email = models.BooleanField(default=True)
+    show_location = models.BooleanField(default=True)
+    show_gender = models.BooleanField(default=True)
     interests = models.JSONField(default=list, blank=True)
     location_title = models.CharField(max_length=255, blank=True)
     location_address = models.CharField(max_length=512, blank=True)

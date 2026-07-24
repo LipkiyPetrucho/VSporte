@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Удалить аккаунт{% endblock %}
+{% block body_class %} class="page-delete-account has-mobile-bottom-nav"{% endblock %}
+
+{% block mobile_bottom_nav %}
+  {% include "includes/mobile_bottom_nav.html" with active="dashboard" %}
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/delete-account.css' %}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="delete-account">
+  <header class="delete-account__header">
+    <a href="{% url 'preferences' %}" class="delete-account__cancel">Отмена</a>
+    <h1 class="delete-account__title">Удалить аккаунт</h1>
+    <span class="delete-account__header-spacer" aria-hidden="true"></span>
+  </header>
+
+  <div class="delete-account__warning">
+    <span class="delete-account__warning-icon" aria-hidden="true">
+      <i class="fas fa-exclamation"></i>
+    </span>
+    <p class="delete-account__warning-text">
+      Удаление профиля приведет к потере данных.
+    </p>
+  </div>
+
+  <form method="post" action="{% url 'delete_account' %}" class="delete-account__form">
+    {% csrf_token %}
+    <button type="submit" class="delete-account__submit">
+      Удалить аккаунт
+    </button>
+  </form>
+</div>
+{% endblock %}

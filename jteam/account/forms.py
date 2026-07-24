@@ -1,8 +1,38 @@
 from django import forms
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.models import User
 
 from .interests import INTEREST_CHOICES
 from .models import Profile
+
+
+class PreferencesPasswordChangeForm(PasswordChangeForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["old_password"].label = "Пароль"
+        self.fields["old_password"].widget.attrs.update(
+            {
+                "class": "password-update__input",
+                "autocomplete": "current-password",
+            }
+        )
+        self.fields["new_password1"].label = "Новый пароль"
+        self.fields["new_password1"].help_text = ""
+        self.fields["new_password1"].widget.attrs.update(
+            {
+                "class": "password-update__input",
+                "placeholder": "Введите новый пароль",
+                "autocomplete": "new-password",
+            }
+        )
+        self.fields["new_password2"].label = "Подтвердите пароль"
+        self.fields["new_password2"].widget.attrs.update(
+            {
+                "class": "password-update__input",
+                "placeholder": "Введите новый пароль еще раз",
+                "autocomplete": "new-password",
+            }
+        )
 
 
 class LoginForm(forms.Form):

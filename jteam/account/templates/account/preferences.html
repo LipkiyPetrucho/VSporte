@@ -68,7 +68,7 @@
       </a>
     </li>
     <li>
-      <a href="#" class="preferences-page__item preferences-page__item--placeholder">
+      <a href="{% url 'contact_visibility' %}" class="preferences-page__item">
         <span class="preferences-page__icon preferences-page__icon--visibility">
           <i class="fas fa-eye" aria-hidden="true"></i>
         </span>
@@ -80,7 +80,7 @@
       </a>
     </li>
     <li>
-      <a href="#" class="preferences-page__item preferences-page__item--placeholder">
+      <a href="{% url 'privacy_policy' %}" class="preferences-page__item">
         <span class="preferences-page__icon preferences-page__icon--policy">
           <i class="fas fa-shield-alt" aria-hidden="true"></i>
         </span>
@@ -92,7 +92,7 @@
       </a>
     </li>
     <li>
-      <a href="#" class="preferences-page__item preferences-page__item--placeholder">
+      <a href="{% url 'terms_of_use' %}" class="preferences-page__item">
         <span class="preferences-page__icon preferences-page__icon--terms">
           <i class="fas fa-file-alt" aria-hidden="true"></i>
         </span>
@@ -116,7 +116,9 @@
       </a>
     </li>
     <li>
-      <a href="#" class="preferences-page__item preferences-page__item--placeholder preferences-page__item--danger">
+      <button type="button"
+              class="preferences-page__item preferences-page__item--danger"
+              data-deactivate-open>
         <span class="preferences-page__icon preferences-page__icon--disable">
           <i class="fas fa-ban" aria-hidden="true"></i>
         </span>
@@ -125,8 +127,48 @@
           <span class="preferences-page__item-desc">Доступ к аккаунту будет отключен</span>
         </span>
         <i class="fas fa-chevron-right preferences-page__chevron" aria-hidden="true"></i>
+      </button>
+    </li>
+    <li>
+      <a href="{% url 'delete_account' %}" class="preferences-page__item preferences-page__item--danger">
+        <span class="preferences-page__icon preferences-page__icon--delete">
+          <i class="fas fa-trash-alt" aria-hidden="true"></i>
+        </span>
+        <span class="preferences-page__item-body">
+          <span class="preferences-page__item-title">Удалить аккаунт</span>
+          <span class="preferences-page__item-desc">Безвозвратно удалить аккаунт и данные</span>
+        </span>
+        <i class="fas fa-chevron-right preferences-page__chevron" aria-hidden="true"></i>
       </a>
     </li>
   </ul>
 </div>
+
+<div class="deactivate-modal" id="deactivate-modal" hidden>
+  <div class="deactivate-modal__backdrop" data-deactivate-close></div>
+  <div class="deactivate-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="deactivate-modal-title">
+    <h2 class="deactivate-modal__title" id="deactivate-modal-title">Отключить аккаунт</h2>
+    <p class="deactivate-modal__text">
+      Отключение аккаунта заблокирует доступ к вашему профилю.
+      Чтобы полностью удалить данные, используйте опцию удаления аккаунта.
+    </p>
+    <div class="deactivate-modal__actions">
+      <button type="button" class="deactivate-modal__btn" data-deactivate-close>Отмена</button>
+      <form method="post" action="{% url 'deactivate_account' %}" class="deactivate-modal__form">
+        {% csrf_token %}
+        <button type="submit" class="deactivate-modal__btn deactivate-modal__btn--danger">
+          Отключить
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/deactivate-modal.css' %}?v=1">
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/deactivate-modal.js' %}?v=1"></script>
 {% endblock %}

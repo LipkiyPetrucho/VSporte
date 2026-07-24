@@ -87,7 +87,7 @@
 
     <div class="profile-page__name-row">
       <p class="profile-page__fullname">{{ user.get_full_name|default:user.username }}</p>
-      {% if user.profile.location_title %}
+      {% if is_own_profile and user.profile.location_title %}
         <span class="profile-page__location">
           <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
           <span>{{ user.profile.location_title }}</span>
@@ -96,6 +96,11 @@
         <span class="profile-page__location">
           <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
           <span data-city-label></span>
+        </span>
+      {% elif user.profile.show_location and user.profile.location_title %}
+        <span class="profile-page__location">
+          <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+          <span>{{ user.profile.location_title }}</span>
         </span>
       {% endif %}
     </div>
@@ -138,8 +143,12 @@
     <div class="profile-page__info-row">
       <span class="profile-page__info-label">Пол</span>
       <span class="profile-page__info-value">
-        {% if user.profile.gender %}
-          {{ user.profile.get_gender_display }}
+        {% if is_own_profile or user.profile.show_gender %}
+          {% if user.profile.gender %}
+            {{ user.profile.get_gender_display }}
+          {% else %}
+            —
+          {% endif %}
         {% else %}
           —
         {% endif %}

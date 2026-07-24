@@ -1,0 +1,104 @@
+/* Delete account confirmation page */
+
+.delete-account {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 16px 32px;
+}
+
+.delete-account__header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 20px;
+}
+
+.delete-account__cancel {
+  justify-self: start;
+  color: #333;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 400;
+  padding: 8px 4px 8px 0;
+}
+
+.delete-account__cancel:hover {
+  color: #12c064;
+}
+
+.delete-account__title {
+  margin: 0;
+  justify-self: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #222;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.delete-account__header-spacer {
+  justify-self: end;
+}
+
+.delete-account__warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 8px 0 28px;
+}
+
+.delete-account__warning-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #e85a6b;
+  color: #fff;
+  font-size: 0.7rem;
+}
+
+.delete-account__warning-text {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #2a2e35;
+  line-height: 1.4;
+}
+
+.delete-account__form {
+  margin: 0;
+}
+
+.delete-account__submit {
+  display: block;
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 20px;
+  background: #e85a6b;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.delete-account__submit:hover {
+  background: #d9485a;
+}
+
+.delete-account__submit:active {
+  opacity: 0.92;
+}
+
+@media (min-width: 768px) {
+  .delete-account {
+    padding-top: 8px;
+  }
+}

@@ -1,11 +1,35 @@
 from django.urls import path, include
-from django.contrib.auth import views as auth_views
 from . import views
 
 urlpatterns = [
+    path(
+        "password_change/",
+        views.PreferencesPasswordChangeView.as_view(),
+        name="password_change",
+    ),
     path("", include("django.contrib.auth.urls")),
     path("", views.dashboard, name="dashboard"),
     path("preferences/", views.preferences, name="preferences"),
+    path(
+        "preferences/privacy/",
+        views.privacy_policy,
+        name="privacy_policy",
+    ),
+    path(
+        "preferences/terms/",
+        views.terms_of_use,
+        name="terms_of_use",
+    ),
+    path(
+        "preferences/delete-account/",
+        views.delete_account,
+        name="delete_account",
+    ),
+    path(
+        "preferences/deactivate/",
+        views.deactivate_account,
+        name="deactivate_account",
+    ),
     path(
         "preferences/interests/",
         views.select_interests,
@@ -46,6 +70,16 @@ urlpatterns = [
         "preferences/notifications/update/",
         views.update_notification_setting,
         name="update_notification_setting",
+    ),
+    path(
+        "preferences/contacts/",
+        views.contact_visibility,
+        name="contact_visibility",
+    ),
+    path(
+        "preferences/contacts/update/",
+        views.update_contact_visibility,
+        name="update_contact_visibility",
     ),
     path("users/<username>/", views.user_detail, name="user_detail"),
     path("search/", views.account_search, name="account_search"),

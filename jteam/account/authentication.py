@@ -11,7 +11,7 @@ class EmailAuthBackend:
     def authenticate(self, request, username=None, password=None):
         try:
             user = User.objects.get(email=username)
-            if user.check_password(password):
+            if user.check_password(password) and user.is_active:
                 return user
             return None
         except (User.DoesNotExist, User.MultipleObjectsReturned):
@@ -19,9 +19,10 @@ class EmailAuthBackend:
 
     def get_user(self, user_id):
         try:
-            return User.objects.get(pk=user_id)
+            user = User.objects.get(pk=user_id)
         except User.DoesNotExist:
             return None
+        return user if user.is_active else None
 
 
 def create_profile(backend, user, *args, **kwargs):

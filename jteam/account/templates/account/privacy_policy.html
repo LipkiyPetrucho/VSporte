@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Политика конфиденциальности{% endblock %}
+{% block body_class %} class="page-privacy-policy has-mobile-bottom-nav"{% endblock %}
+
+{% block mobile_bottom_nav %}
+  {% include "includes/mobile_bottom_nav.html" with active="dashboard" %}
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/legal-page.css' %}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="legal-page">
+  <header class="legal-page__header">
+    <a href="{% url 'preferences' %}" class="legal-page__back" aria-label="Назад">
+      <i class="fas fa-chevron-left" aria-hidden="true"></i>
+    </a>
+    <h1 class="legal-page__title">Политика конфиденциальности</h1>
+  </header>
+
+  <article class="legal-page__body">
+    <p>
+      Настоящая Политика конфиденциальности применяется к сервису JTeam
+      (веб-сайт и связанные функции) и описывает, как обрабатываются сведения
+      о пользователях. Сервис предоставляется «как есть» индивидуальным
+      разработчиком / оператором сервиса.
+    </p>
+
+    <section class="legal-page__section">
+      <h2 class="legal-page__section-title">Сбор и использование информации</h2>
+      <p>
+        При использовании JTeam мы можем получать и обрабатывать сведения,
+        необходимые для работы сервиса, в том числе:
+      </p>
+      <ul class="legal-page__list">
+        <li>данные учётной записи (имя пользователя, имя, адрес электронной почты);</li>
+        <li>данные профиля (фото, пол, описание, интересы, локация);</li>
+        <li>сведения об участии в играх, заявках, приглашениях и дружеских связях;</li>
+        <li>технические данные (IP-адрес, тип устройства и браузера, дата и время
+          обращений, страницы и действия в сервисе).</li>
+      </ul>
+      <p>
+        Мы не стремимся собирать точные идентификаторы устройства сверх того,
+        что нужно для работы сайта. Отдельные сторонние сервисы, подключённые
+        к JTeam, могут получать технические данные в рамках своей работы.
+      </p>
+    </section>
+
+    <section class="legal-page__section">
+      <h2 class="legal-page__section-title">Доступ третьих лиц</h2>
+      <p>
+        Для работы сервиса могут использоваться внешние поставщики. Данные
+        могут периодически передаваться им в объёме, необходимом для
+        соответствующей функции. К таким сервисам могут относиться:
+      </p>
+      <ul class="legal-page__list">
+        <li>
+          Google /
+          <a class="legal-page__link"
+             href="https://policies.google.com/privacy"
+             target="_blank"
+             rel="noopener noreferrer">политика конфиденциальности Google</a>
+          (вход через Google);
+        </li>
+        <li>
+          Meta /
+          <a class="legal-page__link"
+             href="https://www.facebook.com/privacy/policy/"
+             target="_blank"
+             rel="noopener noreferrer">политика конфиденциальности Facebook</a>
+          (вход через Facebook);
+        </li>
+        <li>
+          Яндекс /
+          <a class="legal-page__link"
+             href="https://yandex.ru/legal/confidential/"
+             target="_blank"
+             rel="noopener noreferrer">политика конфиденциальности Яндекса</a>
+          (карты и геоданные).
+        </li>
+      </ul>
+      <p>
+        Мы не продаём персональные данные пользователей третьим лицам в
+        маркетинговых целях.
+      </p>
+    </section>
+
+    <section class="legal-page__section">
+      <h2 class="legal-page__section-title">Отказ от использования</h2>
+      <p>
+        Вы можете прекратить передачу новых данных, перестав пользоваться
+        сервисом и удалив (или запросив отключение) учётную запись. Часть
+        уже сохранённых сведений может храниться в течение разумного срока,
+        если это требуется для безопасности, исполнения обязательств или
+        требований закона.
+      </p>
+    </section>
+
+    <section class="legal-page__section">
+      <h2 class="legal-page__section-title">Хранение данных</h2>
+      <p>
+        Данные хранятся, пока вы пользуетесь JTeam, и в течение разумного
+        периода после этого. Чтобы запросить удаление данных, связанных с
+        вашей учётной записью, напишите на
+        <a class="legal-page__link" href="mailto:pafos.light@yandex.ru">pafos.light@yandex.ru</a>.
+      </p>
+    </section>
+
+    <section class="legal-page__section">
+      <h2 class="legal-page__section-title">Дети</h2>
+      <p>
+        Сервис не предназначен для детей младше 13 лет. Мы сознательно не
+        собираем персональные данные детей младше 13 лет. Если вы считаете,
+        что такой ребёнок предоставил нам данные, свяжитесь с нами — мы
+        удалим соответствующую информацию.
+      </p>
+    </section>
+
+    <section class="legal-page__section">
+      <h2 class="legal-page__section-title">Безопасность</h2>
+      <p>
+        Мы принимаем разумные организационные и технические меры для защиты
+        информации. Однако ни один способ передачи или хранения данных в
+        интернете не является полностью безопасным, и абсолютную защиту
+        гарантировать нельзя.
+      </p>
+    </section>
+
+    <section class="legal-page__section">
+      <h2 class="legal-page__section-title">Изменения</h2>
+      <p>
+        Политика может обновляться. Актуальная версия публикуется в сервисе
+        JTeam. Продолжая пользоваться сервисом после изменений, вы
+        принимаете обновлённую политику, если иное не требуется законом.
+      </p>
+      <p>Дата вступления в силу текущей версии: 24 июля 2026 года.</p>
+    </section>
+
+    <section class="legal-page__section">
+      <h2 class="legal-page__section-title">Ваше согласие</h2>
+      <p>
+        Используя JTeam, вы соглашаетесь на обработку информации в порядке,
+        описанном в настоящей Политике конфиденциальности.
+      </p>
+    </section>
+
+    <section class="legal-page__section">
+      <h2 class="legal-page__section-title">Контакты</h2>
+      <p>
+        По вопросам конфиденциальности пишите на
+        <a class="legal-page__link" href="mailto:pafos.light@yandex.ru">pafos.light@yandex.ru</a>.
+      </p>
+    </section>
+  </article>
+</div>
+{% endblock %}

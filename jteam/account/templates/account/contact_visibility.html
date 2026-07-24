@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Видимость контактов{% endblock %}
+{% block body_class %} class="page-contact-visibility has-mobile-bottom-nav"{% endblock %}
+
+{% block mobile_bottom_nav %}
+  {% include "includes/mobile_bottom_nav.html" with active="dashboard" %}
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/contact-visibility.css' %}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="contact-visibility"
+     id="contact-visibility"
+     data-update-url="{% url 'update_contact_visibility' %}">
+  <header class="contact-visibility__header">
+    <a href="{% url 'preferences' %}" class="contact-visibility__back" aria-label="Назад">
+      <i class="fas fa-chevron-left" aria-hidden="true"></i>
+    </a>
+    <h1 class="contact-visibility__title">Видимость контактов</h1>
+  </header>
+
+  <p class="contact-visibility__intro">
+    Управляйте тем, видят ли другие игроки вашу электронную почту, локацию
+    и личные данные, когда просматривают ваш профиль или детали игры.
+  </p>
+
+  <ul class="contact-visibility__list">
+    {% for setting in contact_settings %}
+      <li class="contact-visibility__item">
+        <span class="contact-visibility__label" id="label-{{ setting.key }}">
+          {{ setting.label }}
+        </span>
+        <label class="contact-visibility__toggle">
+          <input type="checkbox"
+                 class="contact-visibility__toggle-input"
+                 data-setting-key="{{ setting.key }}"
+                 aria-labelledby="label-{{ setting.key }}"
+                 {% if setting.enabled %}checked{% endif %}>
+          <span class="contact-visibility__toggle-slider" aria-hidden="true"></span>
+        </label>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/contact-visibility.js' %}?v=1"></script>
+{% endblock %}

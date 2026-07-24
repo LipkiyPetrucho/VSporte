@@ -1,11 +1,13 @@
 from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import PasswordChangeView
 from django.contrib import messages
-from django.urls import reverse
-from django.views.decorators.http import require_POST
+from django.urls import reverse, reverse_lazy
+from django.views.decorators.http import require_POST, require_http_methods
+from django.db import transaction
 import json
 from .forms import (
     LoginForm,
@@ -14,6 +16,7 @@ from .forms import (
     ProfileEditForm,
     InterestsForm,
     SearchForm,
+    PreferencesPasswordChangeForm,
 )
 from .interests import INTEREST_CATEGORIES
 from .location_service import (
@@ -109,6 +112,66 @@ def preferences(request):
         "account/preferences.html",
         {"section": "preferences"},
     )
+
+
+@login_required
+def privacy_policy(request):
+    return render(
+        request,
+        "account/privacy_policy.html",
+        {"section": "preferences"},
+    )
+
+
+@login_required
+def terms_of_use(request):
+    return render(
+        request,
+        "account/terms_of_use.html",
+        {"section": "preferences"},
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def delete_account(request):
+    if request.method == "GET":
+        return render(
+            request,
+            "account/delete_account.html",
+            {"section": "preferences"},
+        )
+
+    user = request.user
+    logout(request)
+    with transaction.atomic():
+        user.delete()
+    messages.success(request, "Аккаунт удалён")
+    return redirect("login")
+
+
+@login_required
+@require_POST
+def deactivate_account(request):
+    user = request.user
+    logout(request)
+    user.is_active = False
+    user.save(update_fields=["is_active"])
+    messages.success(
+        request,
+        "Аккаунт отключён. Для восстановления свяжитесь с поддержкой.",
+    )
+    return redirect("login")
+
+
+class PreferencesPasswordChangeView(PasswordChangeView):
+    form_class = PreferencesPasswordChangeForm
+    template_name = "registration/password_change_form.html"
+    success_url = reverse_lazy("preferences")
+
+    def form_valid(self, form):
+        messages.success(self.request, "Пароль обновлён")
+        return super().form_valid(form)
 
 
 @login_required
@@ -446,6 +509,56 @@ def update_notification_setting(request):
     profile = ensure_profile(request.user)
     key = request.POST.get("key")
     allowed = {field for field, _label in NOTIFICATION_SETTING_OPTIONS}
+    if key not in allowed:
+        return JsonResponse({"status": "error", "error": "invalid_key"}, status=400)
+
+    raw_value = request.POST.get("enabled", "").lower()
+    if raw_value in ("1", "true", "on", "yes"):
+        enabled = True
+    elif raw_value in ("0", "false", "off", "no"):
+        enabled = False
+    else:
+        return JsonResponse({"status": "error", "error": "invalid_value"}, status=400)
+
+    setattr(profile, key, enabled)
+    profile.save(update_fields=[key])
+    return JsonResponse({"status": "ok", "key": key, "enabled": enabled})
+
+
+CONTACT_VISIBILITY_OPTIONS = (
+    ("show_email", "Показывать email другим пользователям"),
+    ("show_location", "Показывать локацию другим пользователям"),
+    ("show_gender", "Показывать пол другим пользователям"),
+)
+
+
+@login_required
+def contact_visibility(request):
+    profile = ensure_profile(request.user)
+    settings_list = [
+        {
+            "key": key,
+            "label": label,
+            "enabled": getattr(profile, key, True),
+        }
+        for key, label in CONTACT_VISIBILITY_OPTIONS
+    ]
+    return render(
+        request,
+        "account/contact_visibility.html",
+        {
+            "section": "preferences",
+            "contact_settings": settings_list,
+        },
+    )
+
+
+@require_POST
+@login_required
+def update_contact_visibility(request):
+    profile = ensure_profile(request.user)
+    key = request.POST.get("key")
+    allowed = {field for field, _label in CONTACT_VISIBILITY_OPTIONS}
     if key not in allowed:
         return JsonResponse({"status": "error", "error": "invalid_key"}, status=400)
 
