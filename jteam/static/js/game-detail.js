@@ -68,14 +68,34 @@
         });
     }
 
-    function renderParticipantPreview(players, currentUsername, organizerUsername) {
+    function renderParticipantPreview(players, currentUsername, organizerUsername, extraPlayers) {
         const preview = document.getElementById('participants-preview');
         if (!preview) {
             return;
         }
 
-        if (!players.length) {
+        const root = document.querySelector('.game-view');
+        const extras = Math.max(
+            0,
+            parseInt(
+                extraPlayers != null
+                    ? extraPlayers
+                    : ((root && root.dataset.extraPlayers) || '0'),
+                10
+            ) || 0
+        );
+
+        if (!players.length && extras === 0) {
             preview.innerHTML = '<p class="game-view-empty">Пока нет участников. Будьте первым!</p>';
+            return;
+        }
+
+        if (!players.length && extras > 0) {
+            preview.innerHTML =
+                '<div class="game-view-participant game-view-participant--organizer">' +
+                    '<span class="game-view-extra-count" id="extra-players-badge">+' + extras + '</span>' +
+                    '<span class="game-view-participant-name game-view-participant-name--muted">офлайн</span>' +
+                '</div>';
             return;
         }
 
@@ -83,9 +103,108 @@
             return buildParticipantRow(
                 player,
                 player.username === currentUsername,
-                player.username === organizerUsername
+                player.username === organizerUsername,
+                extras
             );
         }).join('');
+    }
+
+    function updateOccupiedCount(joinedCount, extraPlayers, maxPlayers) {
+        const root = document.querySelector('.game-view');
+        const extras = Math.max(
+            0,
+            parseInt(
+                extraPlayers != null
+                    ? extraPlayers
+                    : ((root && root.dataset.extraPlayers) || '0'),
+                10
+            ) || 0
+        );
+        const joined = Math.max(0, parseInt(joinedCount, 10) || 0);
+        const occupied = joined + extras;
+
+        const countNode = document.getElementById('players-count');
+        if (countNode) {
+            countNode.textContent = String(occupied);
+        }
+
+        if (maxPlayers != null) {
+            const maxNode = document.getElementById('players-max');
+            if (maxNode) {
+                maxNode.textContent = String(maxPlayers);
+            }
+            if (root) {
+                root.dataset.maxPlayers = String(maxPlayers);
+            }
+        }
+
+        if (root) {
+            root.dataset.extraPlayers = String(extras);
+            if (typeof joinedCount !== 'undefined' && joinedCount != null) {
+                root.dataset.joinedCount = String(joined);
+            }
+        }
+
+        return occupied;
+    }
+
+    function syncExtraPlayersBadge(extraCount) {
+        const extras = Math.max(0, parseInt(extraCount, 10) || 0);
+        const preview = document.getElementById('participants-preview');
+        let badge = document.getElementById('extra-players-badge');
+
+        if (extras <= 0) {
+            if (badge) {
+                badge.hidden = true;
+                badge.textContent = '+0';
+            }
+            return;
+        }
+
+        if (!badge && preview) {
+            const organizerRow = preview.querySelector('.game-view-participant--organizer .game-view-participant-meta');
+            if (organizerRow) {
+                organizerRow.insertAdjacentHTML(
+                    'beforeend',
+                    '<span class="game-view-extra-count" id="extra-players-badge"></span>'
+                );
+                badge = document.getElementById('extra-players-badge');
+            }
+        }
+
+        if (badge) {
+            badge.hidden = false;
+            badge.textContent = '+' + extras;
+        }
+    }
+
+    function syncParticipantsFromResponse(data, currentUsername, organizerUsername) {
+        const joined = data.joined_count != null
+            ? data.joined_count
+            : (data.players ? data.players.length : data.players_count);
+        const extras = data.extra_players;
+        updateOccupiedCount(joined, extras, data.max_players);
+        if (data.available_seats != null) {
+            const root = document.querySelector('.game-view');
+            if (root) {
+                root.dataset.availableSeats = String(data.available_seats);
+            }
+            const availableEl = document.getElementById('organizer-available-seats');
+            if (availableEl) {
+                availableEl.textContent = String(data.available_seats);
+            }
+        }
+        if (data.players) {
+            renderParticipantPreview(
+                data.players,
+                currentUsername,
+                organizerUsername,
+                extras
+            );
+            renderPlayersList(data.players);
+        } else {
+            syncExtraPlayersBadge(extras);
+        }
     }
 
     function playerProfileUrl(player) {
@@ -95,7 +214,7 @@
         return '/users/' + encodeURIComponent(player.username) + '/';
     }
 
-    function buildParticipantRow(player, isCurrentUser, isOrganizer) {
+    function buildParticipantRow(player, isCurrentUser, isOrganizer, extraPlayers) {
         const avatar = player.photo
             ? '<img src="' + player.photo + '" alt="" class="game-view-participant-avatar">'
             : '<span class="game-view-participant-avatar placeholder">' + player.username.charAt(0).toUpperCase() + '</span>';
@@ -106,11 +225,19 @@
             : '<a href="' + profileUrl + '" class="game-view-participant-name">' + player.username + '</a>';
 
         const badge = isOrganizer ? '<span class="game-view-badge">Организатор</span>' : '';
+        const extras = Math.max(0, parseInt(extraPlayers, 10) || 0);
+        const extraBadge = isOrganizer
+            ? (
+                '<span class="game-view-extra-count" id="extra-players-badge"' +
+                (extras > 0 ? '' : ' hidden') +
+                '>+' + extras + '</span>'
+            )
+            : '';
 
         return (
-            '<div class="game-view-participant">' +
+            '<div class="game-view-participant' + (isOrganizer ? ' game-view-participant--organizer' : '') + '">' +
                 avatar +
-                '<div>' + name + badge + '</div>' +
+                '<div class="game-view-participant-meta">' + name + badge + extraBadge + '</div>' +
             '</div>'
         );
     }
@@ -234,13 +361,7 @@
                     return;
                 }
 
-                const countNode = document.getElementById('players-count');
-                if (countNode) {
-                    countNode.textContent = data.players_count;
-                }
-
-                renderParticipantPreview(data.players, currentUsername, organizerUsername);
-                renderPlayersList(data.players);
+                syncParticipantsFromResponse(data, currentUsername, organizerUsername);
                 updateJoinButton(
                     btn,
                     participationStatusToAction(data.participation_status),
@@ -271,13 +392,7 @@
                 return;
             }
 
-            const countNode = document.getElementById('players-count');
-            if (countNode) {
-                countNode.textContent = data.players_count;
-            }
-
-            renderParticipantPreview(data.players, currentUsername, organizerUsername);
-            renderPlayersList(data.players);
+            syncParticipantsFromResponse(data, currentUsername, organizerUsername);
             updateJoinButton(
                 btn,
                 data.participation_status
@@ -377,12 +492,7 @@
             }
 
             if (data.players) {
-                const countNode = document.getElementById('players-count');
-                if (countNode) {
-                    countNode.textContent = data.players_count;
-                }
-                renderParticipantPreview(data.players, currentUsername, organizerUsername);
-                renderPlayersList(data.players);
+                syncParticipantsFromResponse(data, currentUsername, organizerUsername);
             }
         });
     }
@@ -569,14 +679,6 @@
         });
     }
 
-    function initChatButtons() {
-        document.querySelectorAll('[data-game-chat-btn]').forEach(function (button) {
-            button.addEventListener('click', function () {
-                alert('Чат скоро будет доступен');
-            });
-        });
-    }
-
     const STATUS_MESSAGES = {
         started: 'Игра уже началась',
         finished: 'Игра уже закончилась',
@@ -668,6 +770,352 @@
         });
     }
 
+    function initShare() {
+        const root = document.querySelector('.game-view');
+        const modal = document.getElementById('game-share-modal');
+        if (!root || !modal) {
+            return;
+        }
+
+        const shareUrl = root.dataset.shareUrl || window.location.href;
+        const shareText = root.dataset.shareText || '';
+        const fullText = shareText ? (shareText + '\n' + shareUrl) : shareUrl;
+        const encodedUrl = encodeURIComponent(shareUrl);
+        const encodedText = encodeURIComponent(shareText);
+        const encodedFull = encodeURIComponent(fullText);
+
+        const telegram = document.getElementById('share-telegram');
+        const maxShare = document.getElementById('share-max');
+        const whatsapp = document.getElementById('share-whatsapp');
+        const vk = document.getElementById('share-vk');
+        const ok = document.getElementById('share-ok');
+        const copyBtn = document.getElementById('share-copy');
+        const copyLabel = document.getElementById('share-copy-label');
+        const nativeBtn = document.getElementById('share-native');
+        const backdrop = document.getElementById('game-share-backdrop');
+        const closeBtn = document.getElementById('game-share-close');
+
+        if (telegram) {
+            telegram.href = 'https://t.me/share/url?url=' + encodedUrl + '&text=' + encodedText;
+        }
+        if (maxShare) {
+            maxShare.href = 'https://max.ru/:share?text=' + encodedFull;
+        }
+        if (whatsapp) {
+            whatsapp.href = 'https://wa.me/?text=' + encodedFull;
+        }
+        if (vk) {
+            vk.href = 'https://vk.com/share.php?url=' + encodedUrl + '&title=' + encodedText;
+        }
+        if (ok) {
+            ok.href = 'https://connect.ok.ru/offer?url=' + encodedUrl + '&title=' + encodedText;
+        }
+
+        if (nativeBtn && navigator.share) {
+            nativeBtn.hidden = false;
+            nativeBtn.addEventListener('click', function () {
+                navigator.share({
+                    title: shareText || document.title,
+                    text: shareText,
+                    url: shareUrl,
+                }).catch(function () {});
+            });
+        }
+
+        function openShare() {
+            const menuDropdown = document.getElementById('game-view-menu-dropdown');
+            if (menuDropdown) {
+                menuDropdown.classList.remove('is-open');
+            }
+            modal.hidden = false;
+            document.body.classList.add('game-share-modal-open');
+        }
+
+        function closeShare() {
+            modal.hidden = true;
+            document.body.classList.remove('game-share-modal-open');
+        }
+
+        ['game-share-btn', 'game-menu-share-btn', 'organizer-share-btn'].forEach(function (id) {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openShare();
+                });
+            }
+        });
+
+        if (backdrop) {
+            backdrop.addEventListener('click', closeShare);
+        }
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeShare);
+        }
+
+        if (copyBtn) {
+            copyBtn.addEventListener('click', function () {
+                const done = function () {
+                    if (copyLabel) {
+                        copyLabel.textContent = 'Ссылка скопирована';
+                        setTimeout(function () {
+                            copyLabel.textContent = 'Скопировать ссылку';
+                        }, 2000);
+                    }
+                };
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(shareUrl).then(done).catch(function () {
+                        fallbackCopy(shareUrl, done);
+                    });
+                } else {
+                    fallbackCopy(shareUrl, done);
+                }
+            });
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && !modal.hidden) {
+                closeShare();
+            }
+        });
+    }
+
+    function fallbackCopy(text, onDone) {
+        const input = document.createElement('textarea');
+        input.value = text;
+        input.setAttribute('readonly', '');
+        input.style.position = 'absolute';
+        input.style.left = '-9999px';
+        document.body.appendChild(input);
+        input.select();
+        try {
+            document.execCommand('copy');
+            if (onDone) {
+                onDone();
+            }
+        } catch (e) {
+            // ignore
+        }
+        document.body.removeChild(input);
+    }
+
+    function initOrganizerPanel() {
+        const root = document.querySelector('.game-view');
+        const panel = document.getElementById('game-organizer-panel');
+        if (!root || root.dataset.isOrganizer !== '1' || !panel) {
+            return;
+        }
+
+        const detailsBtn = document.getElementById('organizer-show-details');
+        const mapBtn = document.getElementById('organizer-scroll-map');
+        const toggleBtn = document.getElementById('organizer-settings-toggle');
+        const body = document.getElementById('organizer-settings-body');
+        const detailsCard = document.getElementById('game-details-card');
+        const mapCard = document.querySelector('.game-view-map-card');
+        const form = document.getElementById('organizer-settings-form');
+
+        if (detailsBtn && detailsCard) {
+            detailsBtn.addEventListener('click', function () {
+                detailsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+
+        if (mapBtn && mapCard) {
+            mapBtn.addEventListener('click', function () {
+                mapCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+
+        if (toggleBtn && body) {
+            toggleBtn.addEventListener('click', function () {
+                const collapsed = panel.classList.toggle('is-collapsed');
+                toggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                toggleBtn.textContent = collapsed ? 'Показать настройки' : 'Скрыть настройки';
+            });
+        }
+
+        if (!form) {
+            return;
+        }
+
+        const stepper = document.getElementById('extra-players-stepper');
+        const minusBtn = document.getElementById('extra-players-minus');
+        const plusBtn = document.getElementById('extra-players-plus');
+        const valueEl = document.getElementById('extra-players-value');
+        const inputEl = document.getElementById('extra-players-input');
+        const availableEl = document.getElementById('organizer-available-seats');
+        const statusEl = document.getElementById('organizer-settings-status');
+        const saveBtn = document.getElementById('organizer-settings-save');
+        const priceInput = document.getElementById('organizer-price');
+        const reservedInput = document.getElementById('organizer-place-reserved');
+
+        let extraPlayers = parseInt(inputEl ? inputEl.value : '0', 10) || 0;
+        const maxPlayers = parseInt(root.dataset.maxPlayers || '0', 10) || 0;
+        let maxExtra = stepper
+            ? (parseInt(stepper.dataset.maxExtra || '0', 10) || 0)
+            : 0;
+
+        function currentAvailable() {
+            return Math.max(0, maxExtra - extraPlayers);
+        }
+
+        function syncStepper() {
+            if (valueEl) {
+                valueEl.textContent = String(extraPlayers);
+            }
+            if (inputEl) {
+                inputEl.value = String(extraPlayers);
+            }
+            if (availableEl) {
+                availableEl.textContent = String(currentAvailable());
+            }
+            if (minusBtn) {
+                minusBtn.disabled = extraPlayers <= 0;
+            }
+            if (plusBtn) {
+                plusBtn.disabled = extraPlayers >= maxExtra;
+            }
+
+            const joinedOnline = parseInt(root.dataset.joinedCount || '', 10);
+            const onlineFallback = document.querySelectorAll(
+                '#participants-preview .game-view-participant'
+            ).length;
+            updateOccupiedCount(
+                Number.isFinite(joinedOnline) ? joinedOnline : onlineFallback,
+                extraPlayers,
+                root.dataset.maxPlayers
+            );
+            syncExtraPlayersBadge(extraPlayers);
+        }
+
+        syncStepper();
+
+        if (minusBtn) {
+            minusBtn.addEventListener('click', function () {
+                if (extraPlayers > 0) {
+                    extraPlayers -= 1;
+                    syncStepper();
+                }
+            });
+        }
+
+        if (plusBtn) {
+            plusBtn.addEventListener('click', function () {
+                if (extraPlayers < maxExtra) {
+                    extraPlayers += 1;
+                    syncStepper();
+                }
+            });
+        }
+
+        function showStatus(message, isError) {
+            if (!statusEl) {
+                return;
+            }
+            statusEl.hidden = !message;
+            statusEl.textContent = message || '';
+            statusEl.classList.toggle('is-error', !!isError);
+            statusEl.classList.toggle('is-ok', !isError && !!message);
+        }
+
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const settingsUrl = root.dataset.organizerSettingsUrl;
+            if (!settingsUrl) {
+                return;
+            }
+
+            const body = new URLSearchParams();
+            body.set('extra_players', String(extraPlayers));
+            if (priceInput) {
+                body.set('price', priceInput.value || '0');
+            }
+            if (reservedInput) {
+                body.set('place_reserved', reservedInput.checked ? '1' : '0');
+            }
+
+            if (saveBtn) {
+                saveBtn.disabled = true;
+            }
+            showStatus('');
+
+            try {
+                const response = await fetch(settingsUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                    body: body,
+                });
+
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (parseError) {
+                    showStatus(
+                        response.status === 403
+                            ? 'Нет прав для изменения'
+                            : 'Не удалось сохранить. Обновите страницу.',
+                        true
+                    );
+                    return;
+                }
+
+                if (!response.ok || !data || data.status !== 'ok') {
+                    showStatus((data && data.message) || 'Не удалось сохранить', true);
+                    return;
+                }
+
+                extraPlayers = data.extra_players;
+                maxExtra = Math.max(0, (data.available_seats || 0) + (data.extra_players || 0));
+                if (stepper) {
+                    stepper.dataset.maxExtra = String(maxExtra);
+                }
+                syncStepper();
+
+                updateOccupiedCount(
+                    data.joined_count,
+                    data.extra_players,
+                    data.max_players
+                );
+                root.dataset.availableSeats = String(data.available_seats);
+                syncExtraPlayersBadge(data.extra_players);
+
+                const priceEl = document.getElementById('game-price');
+                const totalEl = document.getElementById('game-total-cost');
+                if (priceEl && typeof data.price === 'number') {
+                    priceEl.textContent = Math.round(data.price) + ' ₽';
+                }
+                if (totalEl && typeof data.total_cost === 'number') {
+                    totalEl.textContent = Math.round(data.total_cost) + ' ₽';
+                }
+
+                const note = document.getElementById('game-place-reserved-note');
+                if (note && typeof data.place_reserved === 'boolean') {
+                    note.textContent = data.place_reserved
+                        ? 'Площадка забронирована'
+                        : 'Возможно площадка еще не забронирована';
+                    note.classList.toggle('game-view-location-note--reserved', data.place_reserved);
+                }
+
+                root.dataset.extraPlayers = String(data.extra_players);
+                root.dataset.availableSeats = String(data.available_seats);
+                showStatus('Изменения сохранены', false);
+            } catch (e) {
+                showStatus('Ошибка сети. Попробуйте ещё раз.', true);
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                }
+            }
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         initMenu();
         initPlayersPanel();
@@ -677,7 +1125,8 @@
         initParticipationActions();
         initInvitationActions();
         initInviteModal();
-        initChatButtons();
         initStatusPolling();
+        initShare();
+        initOrganizerPanel();
     });
 })();

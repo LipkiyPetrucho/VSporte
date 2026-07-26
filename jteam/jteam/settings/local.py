@@ -34,6 +34,9 @@ CELERY_BROKER_URL = os.environ.get(
     "CELERY_BROKER_URL",
     f"redis://{REDIS_HOST}:{REDIS_PORT}/0",
 )
+CHANNEL_LAYERS["default"]["CONFIG"]["hosts"] = [
+    f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_CHANNEL_LAYER_DB}",
+]
 
 # Настройки логирования для разработки
 LOGGING["root"]["level"] = "DEBUG"

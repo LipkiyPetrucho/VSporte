@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from datetime import timedelta
 
 
@@ -59,11 +60,19 @@ class Game(models.Model):
         default=timedelta(hours=1),
         help_text="Продолжительность игры (чч:мм)"
     )
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+    )
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     max_players = models.PositiveIntegerField(default=2)
+    extra_players = models.PositiveIntegerField(
+        default=0,
+        help_text="Доп. участники, которых организатор приводит офлайн",
+    )
     has_skill_level = models.BooleanField(default=False)
     place_reserved = models.BooleanField(default=False)
     joined_players = models.ManyToManyField(
@@ -125,6 +134,10 @@ class Game(models.Model):
         """Возвращает URL-адрес страницы детального отображения игры."""
         return reverse("games:detail", args=[self.pk, self.slug])
 
+    def get_chat_url(self):
+        """Возвращает URL-адрес страницы чата игры."""
+        return reverse("games:chat", args=[self.pk, self.slug])
+
     def compute_status(self, now=None):
         """Вычисляет актуальный статус игры по времени начала и продолжительности."""
         now = now or timezone.now()
@@ -162,7 +175,58 @@ class Game(models.Model):
         
         return " ".join(result) if result else "0 мин"
 
+    def user_can_access_chat(self, user):
+        """True, если пользователь — организатор или участник игры (доступ к чату)."""
+        if not getattr(user, "is_authenticated", False):
+            return False
+        if user.pk == self.user_id:
+            return True
+        return self.joined_players.filter(pk=user.pk).exists()
+
+    def joined_count(self):
+        return self.joined_players.count()
+
+    def occupied_seats(self):
+        """Занятые места: онлайн-участники + доп. участники организатора."""
+        return self.joined_count() + self.extra_players
+
+    def available_seats(self):
+        """Свободные места с учётом доп. участников организатора."""
+        return max(0, self.max_players - self.occupied_seats())
+
+    def is_full(self):
+        return self.available_seats() == 0
+
     # ...Можно добавить проверку на существование игры перед генерацией URL-адреса.
+
+
+class GameMessage(models.Model):
+    """Сообщение в чате игры."""
+
+    game = models.ForeignKey(
+        Game,
+        related_name="messages",
+        on_delete=models.CASCADE,
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="game_messages",
+        on_delete=models.CASCADE,
+    )
+    text = models.TextField(max_length=2000)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Сообщение чата"
+        verbose_name_plural = "Сообщения чата"
+        indexes = [
+            models.Index(fields=["game", "created_at"]),
+        ]
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.author} @ {self.game_id}: {self.text[:50]}"
+
 
 class GameParticipationRequest(models.Model):
     PENDING = "pending"

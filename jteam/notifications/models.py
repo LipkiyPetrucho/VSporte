@@ -11,6 +11,8 @@ class Notification(models.Model):
     TYPE_GAME_INVITATION = "game_invitation"
     TYPE_GAME_PARTICIPATION_ACCEPTED = "game_participation_accepted"
     TYPE_GAME_PARTICIPATION_REJECTED = "game_participation_rejected"
+    TYPE_CHAT_MESSAGE = "chat_message"
+    TYPE_GAME_UPDATED = "game_updated"
 
     TYPE_CHOICES = (
         (TYPE_FRIENDSHIP_REQUEST, "Заявка в друзья"),
@@ -19,6 +21,8 @@ class Notification(models.Model):
         (TYPE_GAME_INVITATION, "Приглашение на игру"),
         (TYPE_GAME_PARTICIPATION_ACCEPTED, "Заявка на участие принята"),
         (TYPE_GAME_PARTICIPATION_REJECTED, "Заявка на участие отклонена"),
+        (TYPE_CHAT_MESSAGE, "Сообщение в чате игры"),
+        (TYPE_GAME_UPDATED, "Изменение условий игры"),
     )
 
     recipient = models.ForeignKey(

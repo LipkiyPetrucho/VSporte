@@ -14,11 +14,19 @@
      data-game-status="{{ game.status }}"
      data-status-url="{% url 'games:status' game.id %}"
      data-max-players="{{ game.max_players }}"
+     data-extra-players="{{ game.extra_players }}"
+     data-joined-count="{{ game.joined_players.count }}"
+     data-available-seats="{{ available_seats }}"
      data-join-url="{% url 'games:join' %}"
      data-participation-url="{% url 'games:participation' %}"
      data-invite-url="{% url 'games:invite' %}"
+     data-organizer-settings-url="{% if is_organizer %}{% url 'games:organizer_settings' game.id game.slug %}{% endif %}"
+     data-share-url="{{ share_url }}"
+     data-share-text="{{ share_text|escapejs }}"
+     data-chat-url="{% url 'games:chat' game.id game.slug %}"
      data-organizer-username="{{ game.user.username }}"
-     data-current-username="{% if request.user.is_authenticated %}{{ request.user.username }}{% endif %}">
+     data-current-username="{% if request.user.is_authenticated %}{{ request.user.username }}{% endif %}"
+     data-is-organizer="{% if is_organizer %}1{% else %}0{% endif %}">
   <header class="game-view-header{% if game.image %} game-view-header--has-cover{% endif %}">
     {% if game.image %}
       <img src="{{ game.image.url }}" alt="" class="game-view-header-cover">
@@ -29,22 +37,29 @@
         <a href="{% url 'games:list' %}" class="game-view-back" aria-label="Назад">
           <i class="fas fa-chevron-left"></i>
         </a>
-        <div class="game-view-menu">
-          <button type="button" class="game-view-menu-btn" id="game-view-menu-btn" aria-label="Меню">
-            <i class="fas fa-ellipsis-v"></i>
+        <div class="game-view-topbar-actions">
+          <button type="button" class="game-view-share-btn" id="game-share-btn" aria-label="Поделиться">
+            <i class="fas fa-share-alt"></i>
           </button>
-          <div class="game-view-menu-dropdown" id="game-view-menu-dropdown">
-            {% if is_organizer and game.status == 'open' %}
-              <form action="{% url 'games:delete' game.id %}" method="post">
-                {% csrf_token %}
-                <button type="submit"
-                        class="danger"
-                        onclick="return confirm('Вы уверены, что хотите удалить эту игру?')">
-                  Удалить игру
-                </button>
-              </form>
-            {% endif %}
-            <a href="{{ game.user.get_absolute_url }}">Профиль организатора</a>
+          <div class="game-view-menu">
+            <button type="button" class="game-view-menu-btn" id="game-view-menu-btn" aria-label="Меню">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <div class="game-view-menu-dropdown" id="game-view-menu-dropdown">
+              {% if is_organizer and game.status == 'open' %}
+                <a href="{% url 'games:edit' game.id game.slug %}">Редактировать</a>
+                <form action="{% url 'games:delete' game.id %}" method="post">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="danger"
+                          onclick="return confirm('Вы уверены, что хотите удалить эту игру?')">
+                    Удалить игру
+                  </button>
+                </form>
+              {% endif %}
+              <a href="{{ game.user.get_absolute_url }}">Профиль организатора</a>
+              <button type="button" class="game-view-menu-share" id="game-menu-share-btn">Поделиться</button>
+            </div>
           </div>
         </div>
       </div>
@@ -65,21 +80,14 @@
         <div>
           <h2 class="game-view-location-name">{{ game.place }}</h2>
           {% if game.place_reserved %}
-            <p class="game-view-location-note game-view-location-note--reserved">Площадка забронирована</p>
+            <p class="game-view-location-note game-view-location-note--reserved" id="game-place-reserved-note">Площадка забронирована</p>
           {% else %}
-            <p class="game-view-location-note">Возможно площадка еще не забронирована</p>
+            <p class="game-view-location-note" id="game-place-reserved-note">Возможно площадка еще не забронирована</p>
           {% endif %}
         </div>
       </section>
 
-      {% if game.description %}
-        <section class="game-view-card">
-          <h2 class="game-view-card-title">Описание</h2>
-          <p class="game-view-description">{{ game.description|linebreaksbr }}</p>
-        </section>
-      {% endif %}
-
-      <section class="game-view-card">
+      <section class="game-view-card" id="game-details-card">
         <h2 class="game-view-card-title">Детали игры</h2>
         <dl class="game-view-details-list">
           <div class="game-view-details-row">
@@ -90,7 +98,7 @@
           </div>
           <div class="game-view-details-row">
             <dt>Уровень игры</dt>
-            <dd>Не указан</dd>
+            <dd>{% if game.has_skill_level %}Указан{% else %}Не указан{% endif %}</dd>
           </div>
           <div class="game-view-details-row">
             <dt>Кол-во игроков</dt>
@@ -98,33 +106,38 @@
           </div>
           <div class="game-view-details-row">
             <dt>Стоимость участия</dt>
-            <dd>{{ game.price|floatformat:0 }} ₽</dd>
+            <dd id="game-price">{{ game.price|floatformat:0 }} ₽</dd>
           </div>
           <div class="game-view-details-row">
             <dt>Полная стоимость</dt>
-            <dd>{{ total_cost|floatformat:0 }} ₽</dd>
+            <dd id="game-total-cost">{{ total_cost|floatformat:0 }} ₽</dd>
           </div>
         </dl>
+        {% if game.description %}
+          <div class="game-view-details-note">
+            <p>{{ game.description|linebreaksbr }}</p>
+          </div>
+        {% endif %}
       </section>
 
       <section class="game-view-card">
         <div class="game-view-participants-head">
           <h2 class="game-view-card-title">
-            <span id="players-count">{{ game.joined_players.count }}</span> из {{ game.max_players }} участников
+            <span id="players-count">{{ occupied_seats }}</span> из <span id="players-max">{{ game.max_players }}</span> участников
           </h2>
         </div>
 
         <div id="participants-preview">
           {% if game.joined_players.exists %}
             {% for player in game.joined_players.all %}
-              <div class="game-view-participant">
+              <div class="game-view-participant{% if player == game.user %} game-view-participant--organizer{% endif %}">
                 {% if player.profile.photo %}
                   {% thumbnail player.profile.photo "42x42" crop="100%" as avatar %}
                   <img src="{{ avatar.url }}" alt="" class="game-view-participant-avatar">
                 {% else %}
                   <span class="game-view-participant-avatar placeholder">{{ player.username.0|upper }}</span>
                 {% endif %}
-                <div>
+                <div class="game-view-participant-meta">
                   {% if player == request.user %}
                     <span class="game-view-participant-name">Вы</span>
                   {% else %}
@@ -132,10 +145,22 @@
                   {% endif %}
                   {% if player == game.user %}
                     <span class="game-view-badge">Организатор</span>
+                    <span class="game-view-extra-count"
+                          id="extra-players-badge"
+                          {% if not game.extra_players %}hidden{% endif %}>+{{ game.extra_players }}</span>
                   {% endif %}
                 </div>
               </div>
             {% endfor %}
+            {% if game.extra_players and game.user not in game.joined_players.all %}
+              <span class="game-view-extra-count game-view-extra-count--standalone"
+                    id="extra-players-badge">+{{ game.extra_players }}</span>
+            {% endif %}
+          {% elif game.extra_players %}
+            <div class="game-view-participant game-view-participant--organizer">
+              <span class="game-view-extra-count" id="extra-players-badge">+{{ game.extra_players }}</span>
+              <span class="game-view-participant-name game-view-participant-name--muted">офлайн</span>
+            </div>
           {% else %}
             <p class="game-view-empty">Пока нет участников. Будьте первым!</p>
           {% endif %}
@@ -326,15 +351,118 @@
           {% endif %}
         </div>
       </section>
+
+      {% if is_organizer %}
+        <aside class="game-view-card game-organizer-panel{% if game.status != 'open' %} game-organizer-panel--readonly{% endif %}"
+               id="game-organizer-panel"
+               aria-label="Панель организатора">
+          <div class="game-organizer-panel__head">
+            <div class="game-organizer-panel__head-text">
+              <p class="game-organizer-panel__title">Вы организатор</p>
+              <button type="button" class="game-organizer-panel__details-link" id="organizer-show-details">
+                Показать детали
+              </button>
+            </div>
+            <div class="game-organizer-panel__head-right">
+              <button type="button"
+                      class="game-organizer-panel__toggle"
+                      id="organizer-settings-toggle"
+                      aria-expanded="true"
+                      aria-controls="organizer-settings-body">
+                Скрыть настройки
+              </button>
+              <i class="fas {% if game.sport == 'football' %}fa-futbol{% elif game.sport == 'tennis' %}fa-table-tennis-paddle-ball{% elif game.sport == 'volleyball' or game.sport == 'beach volleyball' %}fa-volleyball{% elif game.sport == 'ice hockey' %}fa-hockey-puck{% elif game.sport == 'chess' %}fa-chess{% else %}fa-futbol{% endif %} game-organizer-panel__sport-icon"
+                 aria-hidden="true"></i>
+            </div>
+          </div>
+
+          <div class="game-organizer-panel__body" id="organizer-settings-body">
+            <div class="game-organizer-panel__actions">
+              <a href="{% url 'games:chat' game.id game.slug %}"
+                 class="game-organizer-panel__action"
+                 aria-label="Чат"
+                 title="Чат">
+                <i class="fas fa-comment"></i>
+              </a>
+              <button type="button"
+                      class="game-organizer-panel__action"
+                      id="organizer-scroll-map"
+                      aria-label="Местоположение"
+                      title="Местоположение">
+                <i class="fas fa-map-marker-alt"></i>
+              </button>
+              <button type="button"
+                      class="game-organizer-panel__action"
+                      id="organizer-share-btn"
+                      aria-label="Поделиться"
+                      title="Поделиться">
+                <i class="fas fa-share-alt"></i>
+              </button>
+            </div>
+
+            {% if game.status == 'open' %}
+              <form class="game-organizer-panel__form" id="organizer-settings-form">
+                <div class="game-organizer-panel__row">
+                  <label class="game-organizer-panel__label" for="organizer-price">Ваш запланированный взнос</label>
+                  <div class="game-organizer-panel__price">
+                    <input type="number"
+                           id="organizer-price"
+                           name="price"
+                           class="game-organizer-panel__price-input"
+                           min="0"
+                           step="1"
+                           value="{{ game.price|floatformat:0 }}">
+                    <span>₽</span>
+                  </div>
+                </div>
+
+                <div class="game-organizer-panel__row game-organizer-panel__row--stepper">
+                  <div>
+                    <span class="game-organizer-panel__label">Доп. участники</span>
+                    <p class="game-organizer-panel__hint">
+                      Доступно мест: <span id="organizer-available-seats">{{ available_seats }}</span>
+                    </p>
+                  </div>
+                  <div class="game-organizer-stepper" id="extra-players-stepper" data-max-extra="{{ max_extra_players }}">
+                    <button type="button" class="game-organizer-stepper__btn" id="extra-players-minus" aria-label="Меньше">−</button>
+                    <span class="game-organizer-stepper__value" id="extra-players-value">{{ game.extra_players }}</span>
+                    <button type="button" class="game-organizer-stepper__btn" id="extra-players-plus" aria-label="Больше">+</button>
+                    <input type="hidden" name="extra_players" id="extra-players-input" value="{{ game.extra_players }}">
+                  </div>
+                </div>
+
+                <div class="game-organizer-panel__row">
+                  <label class="game-organizer-panel__label" for="organizer-place-reserved">Место забронировано?</label>
+                  <label class="game-organizer-switch">
+                    <input type="checkbox"
+                           id="organizer-place-reserved"
+                           name="place_reserved"
+                           {% if game.place_reserved %}checked{% endif %}>
+                    <span class="game-organizer-switch__slider"></span>
+                  </label>
+                </div>
+
+                <p class="game-organizer-panel__status" id="organizer-settings-status" hidden></p>
+
+                <button type="submit" class="game-organizer-panel__save" id="organizer-settings-save">
+                  Сохранить изменения
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </aside>
+      {% endif %}
     </div>
 
-    <section class="game-view-card game-view-map-card">
-      <h2 class="game-view-map-title">Местоположение</h2>
-      <div id="map"></div>
-    </section>
+    <div class="game-view-sidebar">
+      <section class="game-view-card game-view-map-card">
+        <h2 class="game-view-map-title">Местоположение</h2>
+        <div id="map"></div>
+      </section>
 
-    <div class="game-view-chat-slot game-view-chat-slot--desktop">
-      {% include "games/game/_chat_block.html" %}
+      <div class="game-view-chat-slot game-view-chat-slot--desktop">
+        {% include "games/game/_chat_block.html" %}
+      </div>
     </div>
 
     <div class="game-view-chat-slot game-view-chat-slot--mobile">
@@ -380,6 +508,69 @@
       </div>
     </div>
   {% endif %}
+
+  <div class="game-view-share-modal" id="game-share-modal" hidden>
+    <div class="game-view-share-backdrop" id="game-share-backdrop"></div>
+    <div class="game-view-share-dialog" role="dialog" aria-labelledby="game-share-title">
+      <div class="game-view-share-header">
+        <h2 class="game-view-share-title" id="game-share-title">Поделиться</h2>
+        <button type="button" class="game-view-share-close" id="game-share-close" aria-label="Закрыть">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="game-view-share-grid">
+        <a class="game-view-share-item game-view-share-item--telegram"
+           id="share-telegram"
+           href="#"
+           target="_blank"
+           rel="noopener noreferrer">
+          <span class="game-view-share-icon"><i class="fab fa-telegram-plane"></i></span>
+          Telegram
+        </a>
+        <a class="game-view-share-item game-view-share-item--max"
+           id="share-max"
+           href="#"
+           target="_blank"
+           rel="noopener noreferrer">
+          <span class="game-view-share-icon"><span class="game-view-share-max-mark" aria-hidden="true">M</span></span>
+          MAX
+        </a>
+        <a class="game-view-share-item game-view-share-item--whatsapp"
+           id="share-whatsapp"
+           href="#"
+           target="_blank"
+           rel="noopener noreferrer">
+          <span class="game-view-share-icon"><i class="fab fa-whatsapp"></i></span>
+          WhatsApp
+        </a>
+        <a class="game-view-share-item game-view-share-item--vk"
+           id="share-vk"
+           href="#"
+           target="_blank"
+           rel="noopener noreferrer">
+          <span class="game-view-share-icon"><i class="fab fa-vk"></i></span>
+          ВКонтакте
+        </a>
+        <a class="game-view-share-item game-view-share-item--ok"
+           id="share-ok"
+           href="#"
+           target="_blank"
+           rel="noopener noreferrer">
+          <span class="game-view-share-icon"><i class="fab fa-odnoklassniki"></i></span>
+          Одноклассники
+        </a>
+        <button type="button" class="game-view-share-item" id="share-copy">
+          <span class="game-view-share-icon"><i class="fas fa-link"></i></span>
+          <span id="share-copy-label">Скопировать ссылку</span>
+        </button>
+        <button type="button" class="game-view-share-item" id="share-native" hidden>
+          <span class="game-view-share-icon"><i class="fas fa-share-alt"></i></span>
+          Ещё…
+        </button>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 

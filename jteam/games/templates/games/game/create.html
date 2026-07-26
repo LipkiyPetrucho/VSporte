@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Создать мероприятие{% endblock %}
+{% block title %}{% if is_edit %}Редактировать мероприятие{% else %}Создать мероприятие{% endif %}{% endblock %}
 {% block body_class %} class="page-create-game"{% endblock %}
 
 {% block extra_head %}
@@ -10,26 +10,30 @@
 
 {% block content %}
 <div class="create-event" data-create-game data-geocode-url="{% url 'location:api_geocode' %}" data-suggest-url="{% url 'location:api_suggest' %}"
+     data-min-players="{{ min_players|default:2 }}"
+     {% if is_edit %}data-edit-mode="1"{% endif %}
      {% if form.errors %}
      data-has-errors="1"
      data-initial-step="{% if form.start_time.errors or form.duration.errors %}2{% elif form.sport.errors or form.max_players.errors or form.place.errors %}1{% else %}3{% endif %}"
+     {% elif is_edit %}
+     data-initial-step="1"
      {% endif %}>
     <div class="create-event__shell">
         <header class="create-event__header">
-            <a href="{% url 'games:list' %}" class="create-event__back" aria-label="Назад">
+            <a href="{% if cancel_url %}{{ cancel_url }}{% else %}{% url 'games:list' %}{% endif %}" class="create-event__back" aria-label="Назад">
                 <i class="fas fa-chevron-left"></i>
             </a>
-            <h1 class="create-event__title">Создать мероприятие</h1>
-            <a href="{% url 'games:list' %}" class="create-event__cancel">Отмена</a>
+            <h1 class="create-event__title">{% if page_title %}{{ page_title }}{% else %}Создать мероприятие{% endif %}</h1>
+            <a href="{% if cancel_url %}{{ cancel_url }}{% else %}{% url 'games:list' %}{% endif %}" class="create-event__cancel">Отмена</a>
         </header>
 
         {% if form.errors %}
             <div class="create-event__form-alert" role="alert">
-                Не удалось создать мероприятие. Проверьте поля с ошибками.
+                {% if form_error_message %}{{ form_error_message }}{% else %}Не удалось создать мероприятие. Проверьте поля с ошибками.{% endif %}
             </div>
         {% endif %}
 
-        <nav class="create-event__tabs" aria-label="Шаги создания мероприятия">
+        <nav class="create-event__tabs" aria-label="{% if is_edit %}Шаги редактирования мероприятия{% else %}Шаги создания мероприятия{% endif %}">
             <button type="button"
                     class="create-event__tab create-event__tab--active"
                     data-tab="1"
@@ -40,14 +44,14 @@
                     class="create-event__tab"
                     data-tab="2"
                     aria-selected="false"
-                    disabled>
+                    {% if not is_edit %}disabled{% endif %}>
                 Дата и время
             </button>
             <button type="button"
                     class="create-event__tab"
                     data-tab="3"
                     aria-selected="false"
-                    disabled>
+                    {% if not is_edit %}disabled{% endif %}>
                 Инструкции
             </button>
         </nav>
@@ -89,7 +93,7 @@
                                    id="{{ form.max_players.id_for_label }}"
                                    class="create-event__row-input"
                                    value="{{ form.max_players.value|default:'0' }}"
-                                   min="2"
+                                   min="{{ min_players|default:2 }}"
                                    step="1"
                                    inputmode="numeric"
                                    aria-label="Количество участников">
@@ -244,7 +248,7 @@
                             class="create-event__btn create-event__btn--primary"
                             data-action="submit"
                             hidden>
-                        Создать мероприятие
+                        {% if submit_label %}{{ submit_label }}{% else %}Создать мероприятие{% endif %}
                     </button>
                     <button type="button"
                             class="create-event__btn create-event__btn--secondary"

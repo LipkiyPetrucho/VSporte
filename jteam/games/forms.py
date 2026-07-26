@@ -144,6 +144,12 @@ class GameCreateForm(forms.ModelForm):
                 raise ValidationError("Укажите продолжительность в часах")
         return duration
 
+    def clean_price(self):
+        price = self.cleaned_data.get('price')
+        if price is not None and price < 0:
+            raise ValidationError("Стоимость не может быть отрицательной")
+        return price
+
     def clean(self):
         cleaned_data = super().clean()
         total_price = cleaned_data.get('price')
@@ -172,3 +178,60 @@ class GameFilterForm(forms.Form):
             'class': 'games-page-filter__control',
         })
     )
+
+
+GAME_CONDITION_FIELDS = (
+    "sport",
+    "place",
+    "latitude",
+    "longitude",
+    "start_time",
+    "duration",
+    "max_players",
+    "extra_players",
+    "price",
+    "description",
+    "has_skill_level",
+    "place_reserved",
+)
+
+
+class GameEditForm(GameCreateForm):
+    """Форма редактирования игры: полная стоимость и длительность в UI-формате."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.min_players = 2
+        if self.instance and self.instance.pk:
+            joined_count = self.instance.joined_players.count()
+            self.min_players = max(joined_count, 2)
+            self.fields["max_players"].widget.attrs["min"] = str(self.min_players)
+
+            local_start = timezone.localtime(self.instance.start_time)
+            hours = self.instance.duration.total_seconds() / 3600
+            total_price = (
+                Decimal(self.instance.price) * Decimal(self.instance.max_players)
+            ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+            self.initial["start_time"] = local_start.strftime("%d.%m.%Y %H:%M")
+            self.initial["duration"] = str(hours)
+            self.initial["price"] = total_price
+
+    def clean_max_players(self):
+        max_players = self.cleaned_data.get("max_players")
+        min_players = self.min_players
+        if self.instance and self.instance.pk:
+            min_players = max(self.instance.joined_players.count(), 2)
+        if max_players is not None and max_players < min_players:
+            raise ValidationError(
+                f"Нельзя указать меньше {min_players} — столько игроков уже в составе"
+            )
+        return max_players
+
+
+def snapshot_game_conditions(game):
+    return {field: getattr(game, field) for field in GAME_CONDITION_FIELDS}
+
+
+def game_conditions_changed(before, after):
+    return any(before.get(field) != getattr(after, field) for field in GAME_CONDITION_FIELDS)

@@ -16,10 +16,12 @@ GAME_NOTIFICATION_TYPES = {
     Notification.TYPE_GAME_INVITATION,
     Notification.TYPE_GAME_PARTICIPATION_ACCEPTED,
     Notification.TYPE_GAME_PARTICIPATION_REJECTED,
+    Notification.TYPE_CHAT_MESSAGE,
+    Notification.TYPE_GAME_UPDATED,
 }
 
 # Категории настроек → существующие типы in-app уведомлений.
-# Напоминания об играх и сообщения в чатах пока без бэкенда-источников.
+# Напоминания об играх пока без бэкенда-источника.
 NOTIFICATION_TYPE_PREF_FIELD = {
     Notification.TYPE_FRIENDSHIP_REQUEST: "notify_social_updates",
     Notification.TYPE_FRIENDSHIP_ACCEPTED: "notify_social_updates",
@@ -27,6 +29,8 @@ NOTIFICATION_TYPE_PREF_FIELD = {
     Notification.TYPE_GAME_INVITATION: "notify_activity_updates",
     Notification.TYPE_GAME_PARTICIPATION_ACCEPTED: "notify_activity_updates",
     Notification.TYPE_GAME_PARTICIPATION_REJECTED: "notify_activity_updates",
+    Notification.TYPE_CHAT_MESSAGE: "notify_chat_messages",
+    Notification.TYPE_GAME_UPDATED: "notify_activity_updates",
 }
 
 
@@ -69,6 +73,15 @@ def get_notification_message(notification):
         sport = _game_sport_label(game)
         return f"{actor} отклонил вашу заявку на участие в мероприятии {sport}"
 
+    if notification_type == Notification.TYPE_CHAT_MESSAGE:
+        game = getattr(target, "game", target)
+        sport = _game_sport_label(game)
+        return f"{actor} написал в чате {sport}"
+
+    if notification_type == Notification.TYPE_GAME_UPDATED:
+        sport = _game_sport_label(target)
+        return f"{actor} изменил условия мероприятия {sport}"
+
     return f"{actor} отправил вам уведомление"
 
 
@@ -86,6 +99,8 @@ def get_notification_url(notification):
         return reverse("user_detail", args=[notification.actor.username])
     game = get_notification_game(notification)
     if game is not None:
+        if notification.notification_type == Notification.TYPE_CHAT_MESSAGE:
+            return game.get_chat_url()
         return game.get_absolute_url()
     return reverse("dashboard")
 
@@ -127,6 +142,32 @@ def create_notification(recipient, actor, notification_type, target):
         notification_type=notification_type,
         target=target,
     )
+
+
+def notify_game_chat_message(message):
+    """Уведомляет организатора и участников о новом сообщении (кроме автора)."""
+    game = message.game
+    actor = message.author
+    recipients = {game.user}
+    recipients.update(game.joined_players.all())
+    for recipient in recipients:
+        create_notification(
+            recipient,
+            actor,
+            Notification.TYPE_CHAT_MESSAGE,
+            message,
+        )
+
+
+def notify_game_updated(game, actor):
+    """Уведомляет участников об изменении условий мероприятия."""
+    for recipient in game.joined_players.all():
+        create_notification(
+            recipient,
+            actor,
+            Notification.TYPE_GAME_UPDATED,
+            game,
+        )
 
 
 def get_unread_count(user):

@@ -1,5 +1,5 @@
 <div class="game-view-chat-block">
-  <button type="button" class="game-view-chat-btn" data-game-chat-btn>Чат</button>
+  <a href="{% url 'games:chat' game.id game.slug %}" class="game-view-chat-btn">Чат</a>
   <div class="game-view-chat-footer">
   <span>
     {% if is_organizer %}

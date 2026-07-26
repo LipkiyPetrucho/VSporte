@@ -26,6 +26,4 @@ LOGGING["handlers"]["file"]["level"] = "INFO"
 LOGGING["loggers"]["django"]["level"] = "INFO"
 LOGGING["loggers"]["games"]["level"] = "INFO"
 
-# REDIS_URL = 'redis://redis:6379'
-# CACHES['default']['LOCATION'] = REDIS_URL
-# CHANNEL_LAYERS['default']['CONFIG']['hosts'] = [REDIS_URL]
+# Redis/CHANNEL_LAYERS задаются в settings.py (Celery /0, Channels /1).

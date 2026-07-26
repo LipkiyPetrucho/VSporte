@@ -11,8 +11,6 @@ echo "Database is available"
 echo "Running migrations..."
 python manage.py migrate --noinput
 
-# Запускаем сервер
-echo "Starting server..."
-exec gunicorn jteam.wsgi:application \
-     --bind 0.0.0.0:8000 \
-     --workers 3
+# ASGI-сервер: HTTP + WebSocket (Channels). gunicorn/wsgi больше не используем.
+echo "Starting Daphne (ASGI)..."
+exec daphne -b 0.0.0.0 -p 8000 jteam.asgi:application

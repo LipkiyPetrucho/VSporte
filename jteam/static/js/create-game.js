@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
+    var isEditMode = root.dataset.editMode === '1';
+    var minPlayers = Number(root.dataset.minPlayers) || 2;
+
     var form = document.getElementById('create-game-form');
     var steps = Array.prototype.slice.call(root.querySelectorAll('[data-step]'));
     var tabs = Array.prototype.slice.call(root.querySelectorAll('[data-tab]'));
@@ -628,7 +631,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var isActive = tabStep === currentStep;
             tab.classList.toggle('create-event__tab--active', isActive);
             tab.setAttribute('aria-selected', String(isActive));
-            tab.disabled = tabStep > currentStep;
+            tab.disabled = isEditMode ? false : tabStep > currentStep;
         });
 
         if (nextBtn) {
@@ -649,8 +652,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 return false;
             }
             var players = maxPlayersInput ? Number(maxPlayersInput.value) : 0;
-            if (!players || players < 2) {
-                alert('Укажите количество участников (минимум 2)');
+            if (!players || players < minPlayers) {
+                alert('Укажите количество участников (минимум ' + minPlayers + ')');
                 if (maxPlayersInput) {
                     maxPlayersInput.focus();
                 }
@@ -684,6 +687,17 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!durationInput || !durationInput.value || getDurationHours() <= 0) {
                 alert('Укажите продолжительность');
                 return false;
+            }
+        }
+
+        if (step === 3) {
+            if (priceInput && priceInput.value !== '') {
+                var totalPrice = Number(priceInput.value);
+                if (Number.isNaN(totalPrice) || totalPrice < 0) {
+                    alert('Стоимость не может быть отрицательной');
+                    priceInput.focus();
+                    return false;
+                }
             }
         }
 
@@ -891,7 +905,7 @@ document.addEventListener('DOMContentLoaded', function () {
     tabs.forEach(function (tab) {
         tab.addEventListener('click', function () {
             var targetStep = Number(tab.dataset.tab);
-            if (targetStep <= currentStep) {
+            if (isEditMode || targetStep <= currentStep) {
                 setStep(targetStep);
             }
         });
@@ -899,12 +913,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (form) {
         form.addEventListener('submit', function (event) {
-            if (!validateStep(1) || !validateStep(2)) {
+            if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
                 event.preventDefault();
                 if (!validateStep(1)) {
                     setStep(1);
-                } else {
+                } else if (!validateStep(2)) {
                     setStep(2);
+                } else {
+                    setStep(3);
                 }
             }
         });

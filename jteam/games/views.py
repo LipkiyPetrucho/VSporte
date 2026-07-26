@@ -1,15 +1,16 @@
 import redis
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from actions.utils import create_action
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Greatest
@@ -17,16 +18,23 @@ from django.db.models import Case, When, IntegerField, Q
 import logging
 from easy_thumbnails.files import get_thumbnailer
 from notifications.models import Notification
-from notifications.services import create_notification
+from notifications.services import create_notification, notify_game_updated
 
 from account.service import get_friend_users
-from .forms import GameCreateForm, GameFilterForm
+from .forms import (
+    GameCreateForm,
+    GameEditForm,
+    GameFilterForm,
+    game_conditions_changed,
+    snapshot_game_conditions,
+)
 from .models import Game, GameParticipationRequest, GameInvitation
 from .tasks import sync_game_statuses
 from .templatetags.game_extras import GAME_STATUS_LABELS
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+CHAT_HISTORY_LIMIT = 100
 
 r = redis.Redis(
     host=settings.REDIS_HOST,
@@ -142,7 +150,11 @@ def _join_response(game, user):
     return JsonResponse({
         "status": "ok",
         "players": _build_players_payload(game),
-        "players_count": game.joined_players.count(),
+        "joined_count": game.joined_count(),
+        "extra_players": game.extra_players,
+        "players_count": game.occupied_seats(),
+        "max_players": game.max_players,
+        "available_seats": game.available_seats(),
         "participation_status": _participation_status_for_user(game, user),
     })
 
@@ -202,6 +214,83 @@ def game_create(request):
     return render(request, "games/game/create.html", _game_map_context({"section": "games", "form": form}))
 
 
+@login_required
+def game_edit(request, id, slug):
+    game = get_object_or_404(Game, id=id, slug=slug)
+    game.sync_status()
+
+    if request.user != game.user:
+        messages.error(request, "У вас нет прав для редактирования этой игры")
+        return redirect(game.get_absolute_url())
+
+    if game.status != "open":
+        messages.error(request, "Редактировать можно только открытое мероприятие")
+        return redirect(game.get_absolute_url())
+
+    if request.method == "POST":
+        before = snapshot_game_conditions(game)
+        form = GameEditForm(data=request.POST, files=request.FILES, instance=game)
+        if form.is_valid():
+            try:
+                edited_game = form.save(commit=False)
+                start_time = edited_game.start_time.replace(second=0, microsecond=0)
+                edited_game.start_time = start_time
+
+                if start_time <= timezone.localtime(timezone.now()):
+                    messages.error(request, "Время начала игры должно быть в будущем")
+                    return render(
+                        request,
+                        "games/game/create.html",
+                        _game_map_context(_edit_form_context(form, edited_game)),
+                    )
+
+                edited_game.latitude = form.cleaned_data.get("latitude")
+                edited_game.longitude = form.cleaned_data.get("longitude")
+                edited_game.save()
+
+                if game_conditions_changed(before, edited_game):
+                    notify_game_updated(edited_game, request.user)
+
+                create_action(request.user, "изменил(а) игру", edited_game)
+                messages.success(request, "Мероприятие обновлено")
+                return redirect(edited_game.get_absolute_url())
+            except ValidationError as e:
+                messages.error(request, e.message)
+                return render(
+                    request,
+                    "games/game/create.html",
+                    _game_map_context(_edit_form_context(form, game)),
+                )
+        else:
+            for field_errors in form.errors.values():
+                if field_errors:
+                    messages.error(request, field_errors[0])
+                    break
+    else:
+        form = GameEditForm(instance=game)
+
+    return render(
+        request,
+        "games/game/create.html",
+        _game_map_context(_edit_form_context(form, game)),
+    )
+
+
+def _edit_form_context(form, game):
+    min_players = getattr(form, "min_players", 2)
+    return {
+        "section": "games",
+        "form": form,
+        "game": game,
+        "is_edit": True,
+        "page_title": "Редактировать мероприятие",
+        "submit_label": "Сохранить",
+        "cancel_url": game.get_absolute_url(),
+        "form_error_message": "Не удалось сохранить изменения. Проверьте поля с ошибками.",
+        "min_players": min_players,
+    }
+
+
 def game_detail(request, id, slug):
     game = get_object_or_404(Game, id=id, slug=slug)
     game.sync_status()
@@ -244,6 +333,11 @@ def game_detail(request, id, slug):
                 .select_related("to_user", "to_user__profile")
                 .order_by("created")
             )
+    share_url = request.build_absolute_uri(game.get_absolute_url())
+    share_text = (
+        f"{game.get_sport_display().capitalize()} · {game.place} · "
+        f"{timezone.localtime(game.start_time).strftime('%d.%m.%Y %H:%M')}"
+    )
     return render(
         request,
         "games/game/detail.html",
@@ -253,6 +347,9 @@ def game_detail(request, id, slug):
             "total_views": total_views,
             "end_time": end_time,
             "total_cost": game.price * game.max_players,
+            "available_seats": game.available_seats(),
+            "occupied_seats": game.occupied_seats(),
+            "max_extra_players": max(0, game.max_players - game.joined_players.count()),
             "is_organizer": is_organizer,
             "is_joined": is_joined,
             "has_pending_request": has_pending_request,
@@ -261,9 +358,100 @@ def game_detail(request, id, slug):
             "pending_participation_requests": pending_participation_requests,
             "invite_friends": invite_friends,
             "pending_invitations": pending_invitations,
+            "share_url": share_url,
+            "share_text": share_text,
             **_game_map_context(),
         },
     )
+
+
+def _message_author_photo_url(author):
+    photo = getattr(getattr(author, "profile", None), "photo", None)
+    if not photo:
+        return None
+    thumb_opts = {"size": (42, 42), "crop": True, "upscale": True}
+    return get_thumbnailer(photo).get_thumbnail(thumb_opts).url
+
+
+def _serialize_chat_message(message, current_user=None):
+    author = message.author
+    return {
+        "id": message.id,
+        "text": message.text,
+        "created_at": timezone.localtime(message.created_at).isoformat(),
+        "is_own": bool(
+            current_user
+            and current_user.is_authenticated
+            and author.pk == current_user.pk
+        ),
+        "author": {
+            "id": author.pk,
+            "username": author.username,
+            "photo": _message_author_photo_url(author),
+            "url": reverse("user_detail", args=[author.username]),
+        },
+    }
+
+
+def _chat_messages_queryset(game):
+    return game.messages.select_related("author", "author__profile").order_by(
+        "created_at"
+    )
+
+
+def _latest_chat_messages(game, limit=CHAT_HISTORY_LIMIT):
+    messages = list(_chat_messages_queryset(game).order_by("-created_at")[:limit])
+    messages.reverse()
+    return messages
+
+
+@login_required
+def game_chat(request, id, slug):
+    """Страница чата игры: история сообщений (realtime — через WebSocket)."""
+    game = get_object_or_404(Game, id=id, slug=slug)
+    if not game.user_can_access_chat(request.user):
+        raise PermissionDenied
+    chat_messages = _latest_chat_messages(game)
+    return render(
+        request,
+        "games/game/chat.html",
+        {
+            "section": "games",
+            "game": game,
+            "chat_messages": chat_messages,
+            "messages_url": reverse(
+                "games:chat_messages", args=[game.pk, game.slug]
+            ),
+        },
+    )
+
+
+@login_required
+@require_GET
+def game_chat_messages(request, id, slug):
+    """JSON-история сообщений чата (?after_id= для подгрузки новых)."""
+    game = get_object_or_404(Game, id=id, slug=slug)
+    if not game.user_can_access_chat(request.user):
+        raise PermissionDenied
+
+    after_id = request.GET.get("after_id")
+    qs = _chat_messages_queryset(game)
+    if after_id:
+        try:
+            after_id = int(after_id)
+        except (TypeError, ValueError):
+            return JsonResponse({"status": "error", "message": "Некорректный after_id"}, status=400)
+        messages = list(qs.filter(id__gt=after_id)[:CHAT_HISTORY_LIMIT])
+    else:
+        messages = _latest_chat_messages(game)
+
+    return JsonResponse({
+        "status": "ok",
+        "messages": [
+            _serialize_chat_message(message, request.user)
+            for message in messages
+        ],
+    })
 
 
 def game_status(request, id):
@@ -394,7 +582,15 @@ def game_join(request):
                 "message": "Вы уже участвуете в этой игре.",
             })
 
-        if game.joined_players.count() >= game.max_players:
+        if game.is_full() and request.user != game.user:
+            return JsonResponse({
+                "status": "error",
+                "message": "Максимальное количество игроков достигнуто.",
+            })
+        if (
+            request.user == game.user
+            and game.joined_players.count() >= game.max_players
+        ):
             return JsonResponse({
                 "status": "error",
                 "message": "Максимальное количество игроков достигнуто.",
@@ -506,7 +702,7 @@ def game_participation(request):
                 "status": "error",
                 "message": "Заявка уже обработана.",
             })
-        if game.joined_players.count() >= game.max_players:
+        if game.is_full():
             return JsonResponse({
                 "status": "error",
                 "message": "Максимальное количество игроков достигнуто.",
@@ -586,7 +782,7 @@ def game_invite(request):
                 "status": "error",
                 "message": "Игра недоступна для приглашений.",
             })
-        if game.joined_players.count() >= game.max_players:
+        if game.is_full():
             return JsonResponse({
                 "status": "error",
                 "message": "Максимальное количество игроков достигнуто.",
@@ -674,7 +870,7 @@ def game_invite(request):
                 "status": "error",
                 "message": "Вы уже участвуете в этой игре.",
             })
-        if game.joined_players.count() >= game.max_players:
+        if game.is_full():
             return JsonResponse({
                 "status": "error",
                 "message": "Максимальное количество игроков достигнуто.",
@@ -723,6 +919,83 @@ def game_invite(request):
         return JsonResponse({"status": "ok"})
 
     return JsonResponse({"status": "error"})
+
+
+@login_required
+@require_POST
+def game_organizer_settings(request, id, slug):
+    """Быстрые настройки организатора на странице игры."""
+    game = get_object_or_404(Game, id=id, slug=slug)
+    game.sync_status()
+
+    if request.user != game.user:
+        return JsonResponse({"status": "error", "message": "Нет прав"}, status=403)
+
+    if game.status != "open":
+        return JsonResponse({
+            "status": "error",
+            "message": "Настройки доступны только для открытого мероприятия.",
+        })
+
+    before = snapshot_game_conditions(game)
+
+    try:
+        extra_players = int(request.POST.get("extra_players", game.extra_players))
+    except (TypeError, ValueError):
+        return JsonResponse({
+            "status": "error",
+            "message": "Некорректное число доп. участников.",
+        })
+
+    joined = game.joined_players.count()
+    max_extra = max(0, game.max_players - joined)
+    if extra_players < 0 or extra_players > max_extra:
+        return JsonResponse({
+            "status": "error",
+            "message": f"Доп. участников можно указать от 0 до {max_extra}.",
+        })
+
+    price_raw = request.POST.get("price")
+    if price_raw is not None and price_raw != "":
+        try:
+            price = Decimal(str(price_raw).replace(",", ".")).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+            if price < 0:
+                raise InvalidOperation
+            game.price = price
+        except (InvalidOperation, ValueError):
+            return JsonResponse({
+                "status": "error",
+                "message": "Некорректная стоимость участия.",
+            })
+
+    place_reserved = request.POST.get("place_reserved")
+    if place_reserved is not None:
+        game.place_reserved = place_reserved in ("1", "true", "on", "True")
+
+    game.extra_players = extra_players
+    update_fields = ["extra_players", "updated_at"]
+    if price_raw is not None and price_raw != "":
+        update_fields.append("price")
+    if place_reserved is not None:
+        update_fields.append("place_reserved")
+    game.save(update_fields=update_fields)
+
+    if game_conditions_changed(before, game):
+        notify_game_updated(game, request.user)
+
+    return JsonResponse({
+        "status": "ok",
+        "extra_players": game.extra_players,
+        "joined_count": game.joined_count(),
+        "players_count": game.occupied_seats(),
+        "available_seats": game.available_seats(),
+        "price": float(game.price),
+        "total_cost": float(game.price * game.max_players),
+        "place_reserved": game.place_reserved,
+        "max_players": game.max_players,
+    })
 
 
 @login_required

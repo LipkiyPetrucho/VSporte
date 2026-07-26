@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static thumbnail %}
+
+{% block title %}Чат игры — {{ game.get_sport_display }}{% endblock %}
+{% block body_class %} class="page-game-chat"{% endblock %}
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/game-chat.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="game-chat"
+     data-game-id="{{ game.id }}"
+     data-messages-url="{{ messages_url }}"
+     data-current-username="{{ request.user.username }}">
+  <header class="game-chat-header">
+    <a href="{{ game.get_absolute_url }}" class="game-chat-back" aria-label="Назад к игре">
+      <i class="fas fa-chevron-left"></i>
+    </a>
+    <h1 class="game-chat-title">Чат игры</h1>
+    <span class="game-chat-header-spacer" aria-hidden="true"></span>
+  </header>
+
+  <div class="game-chat-body" data-chat-body>
+    <div class="game-chat-empty{% if chat_messages %} is-hidden{% endif %}" data-chat-empty>
+      <p>У вас нет сообщений.</p>
+    </div>
+
+    <ul class="game-chat-list" data-chat-list aria-live="polite">
+      {% for message in chat_messages %}
+        <li class="game-chat-item{% if message.author_id == request.user.id %} game-chat-item--own{% endif %}"
+            data-message-id="{{ message.id }}">
+          {% if message.author_id != request.user.id %}
+            <a href="{% url 'user_detail' message.author.username %}" class="game-chat-avatar" tabindex="-1">
+              {% if message.author.profile.photo %}
+                {% thumbnail message.author.profile.photo "42x42" crop="100%" as avatar %}
+                <img src="{{ avatar.url }}" alt="">
+              {% else %}
+                <span class="game-chat-avatar-placeholder">{{ message.author.username.0|upper }}</span>
+              {% endif %}
+            </a>
+          {% endif %}
+          <div class="game-chat-bubble">
+            {% if message.author_id != request.user.id %}
+              <div class="game-chat-author">{{ message.author.username }}</div>
+            {% endif %}
+            <div class="game-chat-text">{{ message.text }}</div>
+            <time class="game-chat-time" datetime="{{ message.created_at|date:'c' }}">
+              {{ message.created_at|date:"H:i" }}
+            </time>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <form class="game-chat-composer" data-chat-form autocomplete="off">
+    <label class="visually-hidden" for="game-chat-input">Сообщение</label>
+    <input id="game-chat-input"
+           class="game-chat-input"
+           type="text"
+           name="text"
+           maxlength="2000"
+           placeholder="Сообщение..."
+           data-chat-input
+           autocomplete="off">
+    <button type="submit" class="game-chat-send" data-chat-send>Отправить</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/game-chat.js' %}"></script>
+{% endblock %}

@@ -13,6 +13,8 @@ for env_path in (BASE_DIR / ".env", BASE_DIR.parent / ".env"):
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 INSTALLED_APPS = [
+    # daphne должен быть выше staticfiles — иначе runserver останется на WSGI
+    "daphne",
     # app
     "account.apps.AccountConfig",
     "games.apps.GamesConfig",
@@ -31,6 +33,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.postgres",
     # lib
+    "channels",
     "social_django",
     # 'django_extensions',
     "crispy_forms",
@@ -77,6 +80,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "jteam.wsgi.application"
+ASGI_APPLICATION = "jteam.asgi.application"
 
 DATABASES = {
     "default": {
@@ -155,16 +159,29 @@ YANDEX_MAPS_SUGGEST_API_KEY = os.getenv("YANDEX_MAPS_SUGGEST_API_KEY") or YANDEX
 YANDEX_GEOCODER_API_KEY = os.getenv("YANDEX_GEOCODER_API_KEY") or YANDEX_MAPS_API_KEY
 YANDEX_MAPS_REFERER = os.getenv("YANDEX_MAPS_REFERER", "http://localhost:8000/")
 
-# db redis
+# db redis (уже используется Celery и кешем игр; channel layer — отдельная DB)
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_DB = int(os.getenv("REDIS_DB", 0))
+# Channels: DB /1, чтобы не пересекаться с Celery broker (/0)
+REDIS_CHANNEL_LAYER_DB = int(os.getenv("REDIS_CHANNEL_LAYER_DB", 1))
 
 # celery
 # CELERY_BROKER_URL = 'amqp://guest:guest@localhost'
 CELERY_BROKER_URL = os.getenv(
     "CELERY_BROKER_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
 )
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [
+                f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_CHANNEL_LAYER_DB}"
+            ],
+        },
+    },
+}
 
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
