@@ -115,6 +115,20 @@ def preferences(request):
 
 
 @login_required
+def help_and_support(request):
+    """Экран помощи и поддержки."""
+    return render(
+        request,
+        "account/help_and_support.html",
+        {
+            "section": "help",
+            "support_email": "pafos.light@yandex.ru",
+            "app_version": "1.16",
+        },
+    )
+
+
+@login_required
 def privacy_policy(request):
     return render(
         request,

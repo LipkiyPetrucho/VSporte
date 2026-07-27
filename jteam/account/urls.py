@@ -11,6 +11,11 @@ urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("preferences/", views.preferences, name="preferences"),
     path(
+        "help/",
+        views.help_and_support,
+        name="help_and_support",
+    ),
+    path(
         "preferences/privacy/",
         views.privacy_policy,
         name="privacy_policy",

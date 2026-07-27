@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Помощь и поддержка{% endblock %}
+{% block body_class %} class="page-help-support has-mobile-bottom-nav"{% endblock %}
+
+{% block mobile_bottom_nav %}
+  {% include "includes/mobile_bottom_nav.html" with active="dashboard" %}
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/help-support.css' %}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="help-support">
+  <header class="help-support__header">
+    <a href="{% url 'dashboard' %}" class="help-support__back" aria-label="Назад">
+      <i class="fas fa-chevron-left" aria-hidden="true"></i>
+    </a>
+    <h1 class="help-support__title">Помощь и поддержка</h1>
+  </header>
+
+  <p class="help-support__intro">
+    Возникли проблемы или есть идеи по улучшению? Будем рады услышать вас!
+  </p>
+
+  <div class="help-support__footer">
+    <a href="mailto:{{ support_email }}?subject={{ 'Поддержка JTeam'|urlencode }}"
+       class="help-support__contact">
+      Связаться с нами
+    </a>
+    <p class="help-support__version">Версия {{ app_version }}</p>
+  </div>
+</div>
+{% endblock %}
