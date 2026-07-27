@@ -43,6 +43,13 @@ class Game(models.Model):
         ("finished", "Finished")
     )
 
+    SKILL_LEVELS = (
+        ("beginner", "Начинающий"),
+        ("intermediate", "Средний"),
+        ("advanced", "Продвинутый"),
+        ("pro", "Профи"),
+    )
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name="user_games_created",
@@ -74,6 +81,12 @@ class Game(models.Model):
         help_text="Доп. участники, которых организатор приводит офлайн",
     )
     has_skill_level = models.BooleanField(default=False)
+    skill_level = models.CharField(
+        max_length=20,
+        choices=SKILL_LEVELS,
+        blank=True,
+        default="",
+    )
     place_reserved = models.BooleanField(default=False)
     joined_players = models.ManyToManyField(
         settings.AUTH_USER_MODEL, related_name="joined_games", blank=True

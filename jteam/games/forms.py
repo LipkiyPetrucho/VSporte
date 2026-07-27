@@ -45,6 +45,16 @@ class GameCreateForm(forms.ModelForm):
         label="Уровень игры",
         required=False,
     )
+    skill_level = forms.ChoiceField(
+        label="Уровень",
+        choices=[("", "---------")] + list(Game.SKILL_LEVELS),
+        required=False,
+        widget=forms.Select(attrs={
+            "class": "create-event__hidden-field",
+            "tabindex": "-1",
+            "aria-hidden": "true",
+        }),
+    )
     place_reserved = forms.BooleanField(
         label="Место забронировано?",
         required=False,
@@ -58,6 +68,7 @@ class GameCreateForm(forms.ModelForm):
             "latitude",
             "longitude",
             "has_skill_level",
+            "skill_level",
             "place_reserved",
             "start_time",
             "duration",
@@ -160,6 +171,14 @@ class GameCreateForm(forms.ModelForm):
                 Decimal(total_price) / Decimal(max_players)
             ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
+        has_skill_level = cleaned_data.get("has_skill_level")
+        skill_level = cleaned_data.get("skill_level") or ""
+        if has_skill_level:
+            if not skill_level:
+                cleaned_data["skill_level"] = "beginner"
+        else:
+            cleaned_data["skill_level"] = ""
+
         return cleaned_data
 
 
@@ -192,6 +211,7 @@ GAME_CONDITION_FIELDS = (
     "price",
     "description",
     "has_skill_level",
+    "skill_level",
     "place_reserved",
 )
 

@@ -22,6 +22,23 @@ document.addEventListener('DOMContentLoaded', function () {
     var sportSheet = document.getElementById('create-event-sport-sheet');
     var sportItems = root.querySelectorAll('[data-sport-value]');
 
+    var skillToggle = root.querySelector('[data-skill-toggle]');
+    var skillPanel = root.querySelector('[data-skill-panel]');
+    var skillLabel = root.querySelector('[data-skill-label]');
+    var skillSelect = document.getElementById('id_skill_level');
+    var skillSheet = document.getElementById('create-event-skill-sheet');
+    var skillItems = root.querySelectorAll('[data-skill-value]');
+    var skillSlider = root.querySelector('[data-skill-slider]');
+    var skillFill = root.querySelector('[data-skill-fill]');
+    var skillThumb = root.querySelector('[data-skill-thumb]');
+    var skillDots = root.querySelectorAll('[data-skill-dot]');
+    var skillLevels = [
+        { value: 'beginner', label: 'Начинающий' },
+        { value: 'intermediate', label: 'Средний' },
+        { value: 'advanced', label: 'Продвинутый' },
+        { value: 'pro', label: 'Профи' }
+    ];
+    var skillIndex = 0;
     var placeInput = document.getElementById('id_place');
     var venueInput = document.getElementById('create-event-venue-input');
     var venueLabel = root.querySelector('[data-venue-label]');
@@ -726,6 +743,147 @@ document.addEventListener('DOMContentLoaded', function () {
             closeSheet(sportSheet);
         });
     });
+
+    function skillIndexFromValue(value) {
+        for (var i = 0; i < skillLevels.length; i += 1) {
+            if (skillLevels[i].value === value) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    function syncSkillUI() {
+        var level = skillLevels[skillIndex] || skillLevels[0];
+        if (skillSelect) {
+            skillSelect.value = skillToggle && skillToggle.checked ? level.value : '';
+        }
+        if (skillLabel) {
+            skillLabel.textContent = level.label;
+        }
+        if (skillSlider) {
+            skillSlider.setAttribute('aria-valuenow', String(skillIndex));
+            skillSlider.setAttribute('aria-valuetext', level.label);
+        }
+        var percent = skillLevels.length > 1
+            ? (skillIndex / (skillLevels.length - 1)) * 100
+            : 0;
+        if (skillFill) {
+            skillFill.style.width = percent + '%';
+        }
+        if (skillThumb) {
+            skillThumb.style.left = percent + '%';
+        }
+        skillDots.forEach(function (dot) {
+            var idx = Number(dot.dataset.skillDot);
+            dot.classList.toggle('is-active', idx <= skillIndex);
+        });
+        skillItems.forEach(function (item) {
+            item.classList.toggle(
+                'is-selected',
+                item.dataset.skillValue === level.value
+            );
+        });
+    }
+
+    function setSkillIndex(index) {
+        skillIndex = Math.max(0, Math.min(skillLevels.length - 1, index));
+        syncSkillUI();
+    }
+
+    function syncSkillPanelVisibility() {
+        var enabled = !!(skillToggle && skillToggle.checked);
+        if (skillPanel) {
+            skillPanel.hidden = !enabled;
+        }
+        if (enabled) {
+            if (skillSelect && skillSelect.value) {
+                skillIndex = skillIndexFromValue(skillSelect.value);
+            }
+            syncSkillUI();
+        } else if (skillSelect) {
+            skillSelect.value = '';
+        }
+    }
+
+    function skillIndexFromPointer(clientX) {
+        if (!skillSlider) {
+            return skillIndex;
+        }
+        var track = skillSlider.querySelector('.create-event__skill-track') || skillSlider;
+        var rect = track.getBoundingClientRect();
+        var ratio = (clientX - rect.left) / Math.max(1, rect.width);
+        ratio = Math.max(0, Math.min(1, ratio));
+        return Math.round(ratio * (skillLevels.length - 1));
+    }
+
+    if (skillToggle) {
+        skillToggle.addEventListener('change', function () {
+            if (skillToggle.checked && skillSelect && !skillSelect.value) {
+                skillIndex = 0;
+            }
+            syncSkillPanelVisibility();
+        });
+    }
+
+    if (skillSlider) {
+        skillSlider.addEventListener('pointerdown', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            setSkillIndex(skillIndexFromPointer(event.clientX));
+
+            function onMove(moveEvent) {
+                moveEvent.preventDefault();
+                setSkillIndex(skillIndexFromPointer(moveEvent.clientX));
+            }
+
+            function onUp(upEvent) {
+                if (upEvent) {
+                    upEvent.preventDefault();
+                }
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                window.removeEventListener('pointercancel', onUp);
+            }
+
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
+            window.addEventListener('pointercancel', onUp);
+        });
+
+        skillSlider.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+
+        skillSlider.addEventListener('keydown', function (event) {
+            if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                setSkillIndex(skillIndex + 1);
+            } else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+                event.preventDefault();
+                setSkillIndex(skillIndex - 1);
+            } else if (event.key === 'Home') {
+                event.preventDefault();
+                setSkillIndex(0);
+            } else if (event.key === 'End') {
+                event.preventDefault();
+                setSkillIndex(skillLevels.length - 1);
+            }
+        });
+    }
+
+    skillItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setSkillIndex(skillIndexFromValue(item.dataset.skillValue));
+            closeSheet(skillSheet);
+        });
+    });
+
+    if (skillSelect && skillSelect.value) {
+        skillIndex = skillIndexFromValue(skillSelect.value);
+    }
+    syncSkillPanelVisibility();
 
     if (venueTrigger) {
         venueTrigger.addEventListener('click', function () {

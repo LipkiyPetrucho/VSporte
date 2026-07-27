@@ -102,18 +102,45 @@
                             <p class="create-event__field-error" style="padding: 0 20px 8px;">{{ form.max_players.errors.0 }}</p>
                         {% endif %}
 
-                        <div class="create-event__row create-event__row--plain">
-                            <div class="create-event__row-main">
-                                <i class="fas fa-medal create-event__row-icon" aria-hidden="true"></i>
-                                <span class="create-event__row-label">Уровень игры</span>
+                        <div class="create-event__skill" data-skill-block>
+                            <div class="create-event__row create-event__row--plain">
+                                <div class="create-event__row-main">
+                                    <i class="fas fa-medal create-event__row-icon" aria-hidden="true"></i>
+                                    <span class="create-event__row-label">Уровень игры</span>
+                                </div>
+                                <label class="create-event__toggle" data-skill-toggle-wrap>
+                                    <input type="checkbox"
+                                           name="{{ form.has_skill_level.html_name }}"
+                                           id="{{ form.has_skill_level.id_for_label }}"
+                                           data-skill-toggle
+                                           {% if form.has_skill_level.value %}checked{% endif %}>
+                                    <span class="create-event__toggle-slider"></span>
+                                </label>
                             </div>
-                            <label class="create-event__toggle">
-                                <input type="checkbox"
-                                       name="{{ form.has_skill_level.html_name }}"
-                                       id="{{ form.has_skill_level.id_for_label }}"
-                                       {% if form.has_skill_level.value %}checked{% endif %}>
-                                <span class="create-event__toggle-slider"></span>
-                            </label>
+
+                            <div class="create-event__skill-picker"
+                                 data-skill-panel
+                                 {% if not form.has_skill_level.value %}hidden{% endif %}>
+                                <p class="create-event__skill-label" data-skill-label>Начинающий</p>
+                                <div class="create-event__skill-slider"
+                                     data-skill-slider
+                                     role="slider"
+                                     tabindex="0"
+                                     aria-valuemin="0"
+                                     aria-valuemax="3"
+                                     aria-valuenow="0"
+                                     aria-label="Уровень игры">
+                                    <div class="create-event__skill-track" aria-hidden="true">
+                                        <span class="create-event__skill-fill" data-skill-fill></span>
+                                        <span class="create-event__skill-dot" data-skill-dot="0"></span>
+                                        <span class="create-event__skill-dot" data-skill-dot="1"></span>
+                                        <span class="create-event__skill-dot" data-skill-dot="2"></span>
+                                        <span class="create-event__skill-dot" data-skill-dot="3"></span>
+                                        <span class="create-event__skill-thumb" data-skill-thumb></span>
+                                    </div>
+                                </div>
+                            </div>
+                            {{ form.skill_level }}
                         </div>
 
                         <div class="create-event__row create-event__row--picker"
@@ -278,6 +305,32 @@
                                     class="create-event__sport-item"
                                     data-sport-value="{{ value }}"
                                     data-sport-label="{{ label }}">
+                                {{ label }}
+                            </button>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="create-event__sheet" id="create-event-skill-sheet" hidden>
+        <div class="create-event__sheet-backdrop" data-sheet-close></div>
+        <div class="create-event__sheet-panel" role="dialog" aria-modal="true" aria-labelledby="skill-sheet-title">
+            <div class="create-event__sheet-header">
+                <h2 id="skill-sheet-title">Уровень игры</h2>
+                <button type="button" class="create-event__sheet-close" data-sheet-close aria-label="Закрыть">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <ul class="create-event__sport-list">
+                {% for value, label in form.fields.skill_level.choices %}
+                    {% if value %}
+                        <li>
+                            <button type="button"
+                                    class="create-event__sport-item"
+                                    data-skill-value="{{ value }}"
+                                    data-skill-label="{{ label }}">
                                 {{ label }}
                             </button>
                         </li>

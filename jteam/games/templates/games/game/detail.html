@@ -98,7 +98,13 @@
           </div>
           <div class="game-view-details-row">
             <dt>Уровень игры</dt>
-            <dd>{% if game.has_skill_level %}Указан{% else %}Не указан{% endif %}</dd>
+            <dd id="game-skill-level">
+              {% if game.has_skill_level and game.skill_level %}
+                {{ game.get_skill_level_display }}
+              {% else %}
+                Не указан
+              {% endif %}
+            </dd>
           </div>
           <div class="game-view-details-row">
             <dt>Кол-во игроков</dt>
