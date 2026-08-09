@@ -1,4 +1,9 @@
 (function () {
+    let playerTeamMap = {};
+    let currentTeamRoster = null;
+    let selectedTeamChip = null;
+    let teamsAssignBusy = false;
+
     function getCsrfToken() {
         if (typeof Cookies !== 'undefined') {
             return Cookies.get('csrftoken');
@@ -32,6 +37,12 @@
 
         playersBtn.addEventListener('click', function () {
             panel.hidden = !panel.hidden;
+            if (!panel.hidden) {
+                const teamsPanel = document.getElementById('teams-panel');
+                if (teamsPanel) {
+                    teamsPanel.hidden = true;
+                }
+            }
         });
     }
 
@@ -194,6 +205,9 @@
                 availableEl.textContent = String(data.available_seats);
             }
         }
+        if (data.team_roster) {
+            playerTeamMap = buildPlayerTeamMap(normalizeTeamRoster(data.team_roster));
+        }
         if (data.players) {
             renderParticipantPreview(
                 data.players,
@@ -205,6 +219,9 @@
         } else {
             syncExtraPlayersBadge(extras);
         }
+        if (data.team_roster) {
+            applyTeamRoster(data.team_roster);
+        }
     }
 
     function playerProfileUrl(player) {
@@ -212,6 +229,16 @@
             return player.url;
         }
         return '/users/' + encodeURIComponent(player.username) + '/';
+    }
+
+    function teamBadgeHtml(team) {
+        if (team === 1) {
+            return '<span class="game-view-team-badge game-view-team-badge--a" title="Команда A" aria-label="Команда A">A</span>';
+        }
+        if (team === 2) {
+            return '<span class="game-view-team-badge game-view-team-badge--b" title="Команда B" aria-label="Команда B">B</span>';
+        }
+        return '';
     }
 
     function buildParticipantRow(player, isCurrentUser, isOrganizer, extraPlayers) {
@@ -224,6 +251,7 @@
             ? '<span class="game-view-participant-name">Вы</span>'
             : '<a href="' + profileUrl + '" class="game-view-participant-name">' + player.username + '</a>';
 
+        const teamBadge = teamBadgeHtml(playerTeamMap[player.username]);
         const badge = isOrganizer ? '<span class="game-view-badge">Организатор</span>' : '';
         const extras = Math.max(0, parseInt(extraPlayers, 10) || 0);
         const extraBadge = isOrganizer
@@ -237,7 +265,7 @@
         return (
             '<div class="game-view-participant' + (isOrganizer ? ' game-view-participant--organizer' : '') + '">' +
                 avatar +
-                '<div class="game-view-participant-meta">' + name + badge + extraBadge + '</div>' +
+                '<div class="game-view-participant-meta">' + name + teamBadge + badge + extraBadge + '</div>' +
             '</div>'
         );
     }
@@ -268,6 +296,452 @@
                     '<a href="' + profileUrl + '">' + player.username + '</a>' +
                 '</div>'
             );
+        });
+    }
+
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function normalizeTeamRoster(roster) {
+        if (!roster || typeof roster !== 'object') {
+            return { teams: { 1: [], 2: [] }, bench: [] };
+        }
+        const teams = roster.teams || {};
+        return {
+            teams: {
+                1: teams[1] || teams['1'] || [],
+                2: teams[2] || teams['2'] || [],
+            },
+            bench: roster.bench || [],
+        };
+    }
+
+    function buildPlayerTeamMap(roster) {
+        const map = {};
+        const normalized = normalizeTeamRoster(roster);
+        [1, 2].forEach(function (team) {
+            (normalized.teams[team] || []).forEach(function (entry) {
+                if (entry && entry.type === 'user' && entry.username) {
+                    map[entry.username] = team;
+                }
+            });
+        });
+        return map;
+    }
+
+    function chipKey(entry) {
+        if (!entry) {
+            return '';
+        }
+        if (entry.type === 'user') {
+            return 'user:' + entry.user_id;
+        }
+        return 'offline:' + entry.offline_slot;
+    }
+
+    function entryLabel(entry) {
+        if (!entry) {
+            return '';
+        }
+        if (entry.type === 'offline') {
+            return entry.label || ('Гость ' + (Number(entry.offline_slot) + 1));
+        }
+        return entry.username || '';
+    }
+
+    function entryInitial(entry) {
+        const label = entryLabel(entry);
+        return label ? label.charAt(0).toUpperCase() : '?';
+    }
+
+    function buildTeamChip(entry, team, editable) {
+        const key = chipKey(entry);
+        const label = escapeHtml(entryLabel(entry));
+        const isOffline = entry.type === 'offline';
+        const avatar = (!isOffline && entry.photo)
+            ? '<img src="' + escapeHtml(entry.photo) + '" alt="" class="game-teams-chip__avatar">'
+            : (
+                '<span class="game-teams-chip__avatar game-teams-chip__avatar--placeholder' +
+                (isOffline ? ' game-teams-chip__avatar--guest' : '') +
+                '">' + escapeHtml(entryInitial(entry)) + '</span>'
+            );
+
+        const attrs = [
+            'class="game-teams-chip' +
+                (team === 1 ? ' game-teams-chip--a' : '') +
+                (team === 2 ? ' game-teams-chip--b' : '') +
+                (isOffline ? ' game-teams-chip--guest' : '') +
+                '"',
+            'type="button"',
+            'data-chip-key="' + escapeHtml(key) + '"',
+            'data-entry-type="' + escapeHtml(entry.type) + '"',
+            team ? 'data-current-team="' + team + '"' : 'data-current-team=""',
+        ];
+
+        if (entry.type === 'user') {
+            attrs.push('data-user-id="' + escapeHtml(entry.user_id) + '"');
+        } else {
+            attrs.push('data-offline-slot="' + escapeHtml(entry.offline_slot) + '"');
+        }
+
+        if (!editable) {
+            attrs.push('disabled');
+            attrs.push('tabindex="-1"');
+        }
+
+        return (
+            '<button ' + attrs.join(' ') + '>' +
+                avatar +
+                '<span class="game-teams-chip__name">' + label + '</span>' +
+            '</button>'
+        );
+    }
+
+    function emptySlotHtml(count) {
+        let html = '';
+        const slots = Math.max(1, count);
+        for (let i = 0; i < slots; i += 1) {
+            html += '<span class="game-teams-empty-slot" aria-hidden="true"></span>';
+        }
+        return html;
+    }
+
+    function renderTeamSlots(container, entries, team, editable) {
+        if (!container) {
+            return;
+        }
+        const list = entries || [];
+        if (!list.length) {
+            container.innerHTML = emptySlotHtml(2);
+            return;
+        }
+        container.innerHTML = list.map(function (entry) {
+            return buildTeamChip(entry, team, editable);
+        }).join('') + emptySlotHtml(1);
+    }
+
+    function renderTeamBench(container, entries, editable) {
+        if (!container) {
+            return;
+        }
+        const list = entries || [];
+        if (!list.length) {
+            container.innerHTML = '<p class="game-teams-bench__empty">Все игроки распределены</p>';
+            return;
+        }
+        container.innerHTML = list.map(function (entry) {
+            return buildTeamChip(entry, null, editable);
+        }).join('');
+    }
+
+    function syncParticipantTeamBadges() {
+        const preview = document.getElementById('participants-preview');
+        if (!preview) {
+            return;
+        }
+
+        preview.querySelectorAll('.game-view-participant').forEach(function (row) {
+            const nameLink = row.querySelector('.game-view-participant-name');
+            if (!nameLink) {
+                return;
+            }
+            const username = nameLink.tagName === 'A'
+                ? nameLink.textContent.trim()
+                : null;
+            const isYou = nameLink.tagName === 'SPAN' && nameLink.textContent.trim() === 'Вы';
+            const root = document.querySelector('.game-view');
+            const currentUsername = root ? (root.dataset.currentUsername || '') : '';
+            const key = isYou ? currentUsername : username;
+            const team = key ? playerTeamMap[key] : null;
+
+            let badge = row.querySelector('.game-view-team-badge');
+            if (!team) {
+                if (badge) {
+                    badge.remove();
+                }
+                return;
+            }
+
+            const html = teamBadgeHtml(team);
+            if (badge) {
+                badge.outerHTML = html;
+            } else {
+                const meta = row.querySelector('.game-view-participant-meta');
+                if (meta) {
+                    nameLink.insertAdjacentHTML('afterend', html);
+                }
+            }
+        });
+    }
+
+    function showTeamsStatus(message, isError) {
+        const statusEl = document.getElementById('teams-status');
+        if (!statusEl) {
+            return;
+        }
+        if (!message) {
+            statusEl.hidden = true;
+            statusEl.textContent = '';
+            statusEl.classList.remove('is-error');
+            return;
+        }
+        statusEl.hidden = false;
+        statusEl.textContent = message;
+        statusEl.classList.toggle('is-error', !!isError);
+    }
+
+    function clearTeamSelection() {
+        selectedTeamChip = null;
+        document.querySelectorAll('.game-teams-chip.is-selected').forEach(function (el) {
+            el.classList.remove('is-selected');
+        });
+        document.querySelectorAll('.game-teams-side.is-target, .game-teams-bench.is-target').forEach(function (el) {
+            el.classList.remove('is-target');
+        });
+    }
+
+    function setTeamSelection(chipEl) {
+        clearTeamSelection();
+        if (!chipEl) {
+            return;
+        }
+        selectedTeamChip = {
+            type: chipEl.dataset.entryType,
+            user_id: chipEl.dataset.userId ? parseInt(chipEl.dataset.userId, 10) : null,
+            offline_slot: chipEl.dataset.offlineSlot != null && chipEl.dataset.offlineSlot !== ''
+                ? parseInt(chipEl.dataset.offlineSlot, 10)
+                : null,
+            current_team: chipEl.dataset.currentTeam
+                ? parseInt(chipEl.dataset.currentTeam, 10)
+                : null,
+            key: chipEl.dataset.chipKey,
+        };
+        chipEl.classList.add('is-selected');
+        document.querySelectorAll('.game-teams-side, .game-teams-bench').forEach(function (zone) {
+            zone.classList.add('is-target');
+        });
+    }
+
+    function applyTeamRoster(roster, options) {
+        const normalized = normalizeTeamRoster(roster);
+        currentTeamRoster = normalized;
+        playerTeamMap = buildPlayerTeamMap(normalized);
+
+        const panel = document.getElementById('teams-panel');
+        if (!panel) {
+            syncParticipantTeamBadges();
+            return;
+        }
+
+        const editable = panel.dataset.editable === '1';
+        const animateKey = options && options.animateKey;
+        const flashTeam = options && options.flashTeam;
+
+        renderTeamSlots(
+            document.getElementById('team-a-slots'),
+            normalized.teams[1],
+            1,
+            editable
+        );
+        renderTeamSlots(
+            document.getElementById('team-b-slots'),
+            normalized.teams[2],
+            2,
+            editable
+        );
+        renderTeamBench(
+            document.getElementById('team-bench'),
+            normalized.bench,
+            editable
+        );
+
+        if (animateKey) {
+            const chip = panel.querySelector('[data-chip-key="' + animateKey + '"]');
+            if (chip) {
+                chip.classList.add('is-pop');
+                window.setTimeout(function () {
+                    chip.classList.remove('is-pop');
+                }, 320);
+            }
+        }
+
+        if (flashTeam === 1 || flashTeam === 2) {
+            const side = panel.querySelector('.game-teams-side[data-team="' + flashTeam + '"]');
+            if (side) {
+                side.classList.add('is-flash');
+                window.setTimeout(function () {
+                    side.classList.remove('is-flash');
+                }, 420);
+            }
+        } else if (flashTeam === 'bench') {
+            const bench = panel.querySelector('.game-teams-bench');
+            if (bench) {
+                bench.classList.add('is-flash');
+                window.setTimeout(function () {
+                    bench.classList.remove('is-flash');
+                }, 420);
+            }
+        }
+
+        syncParticipantTeamBadges();
+    }
+
+    function openTeamsPanel() {
+        const panel = document.getElementById('teams-panel');
+        const playersPanel = document.getElementById('players-panel');
+        if (!panel) {
+            return;
+        }
+        if (playersPanel) {
+            playersPanel.hidden = true;
+        }
+        panel.hidden = false;
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    async function assignSelectedToTeam(team) {
+        const root = document.querySelector('.game-view');
+        const panel = document.getElementById('teams-panel');
+        if (!root || !panel || !selectedTeamChip || teamsAssignBusy) {
+            return;
+        }
+        if (panel.dataset.editable !== '1') {
+            return;
+        }
+
+        const teamsUrl = root.dataset.teamsUrl;
+        if (!teamsUrl) {
+            return;
+        }
+
+        if (selectedTeamChip.current_team === team) {
+            clearTeamSelection();
+            return;
+        }
+
+        const payload = { team: team };
+        if (selectedTeamChip.type === 'user') {
+            payload.user_id = selectedTeamChip.user_id;
+        } else {
+            payload.offline_slot = selectedTeamChip.offline_slot;
+        }
+
+        const animateKey = selectedTeamChip.key;
+        teamsAssignBusy = true;
+        showTeamsStatus('');
+
+        try {
+            const response = await fetch(teamsUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload),
+            });
+
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                showTeamsStatus('Не удалось обновить состав', true);
+                return;
+            }
+
+            if (!response.ok || !data || data.status !== 'ok') {
+                showTeamsStatus((data && data.message) || 'Не удалось обновить состав', true);
+                return;
+            }
+
+            clearTeamSelection();
+            applyTeamRoster(data.team_roster, {
+                animateKey: animateKey,
+                flashTeam: team == null ? 'bench' : team,
+            });
+        } catch (e) {
+            showTeamsStatus('Ошибка сети. Попробуйте ещё раз.', true);
+        } finally {
+            teamsAssignBusy = false;
+        }
+    }
+
+    function initTeamsPanel() {
+        const root = document.querySelector('.game-view');
+        const panel = document.getElementById('teams-panel');
+        const teamsBtn = document.getElementById('game-action-teams');
+        if (!root || root.dataset.isTeamGame !== '1' || !panel) {
+            return;
+        }
+
+        const dataEl = document.getElementById('team-roster-data');
+        if (dataEl) {
+            try {
+                applyTeamRoster(JSON.parse(dataEl.textContent));
+            } catch (e) {
+                applyTeamRoster(null);
+            }
+        } else {
+            applyTeamRoster(null);
+        }
+
+        if (teamsBtn) {
+            teamsBtn.addEventListener('click', function () {
+                if (panel.hidden) {
+                    openTeamsPanel();
+                } else {
+                    panel.hidden = true;
+                    clearTeamSelection();
+                }
+            });
+        }
+
+        const organizerTeamsBtn = document.getElementById('organizer-teams-btn');
+        if (organizerTeamsBtn) {
+            organizerTeamsBtn.addEventListener('click', function () {
+                openTeamsPanel();
+            });
+        }
+
+        panel.addEventListener('click', function (event) {
+            if (panel.dataset.editable !== '1') {
+                return;
+            }
+
+            const chip = event.target.closest('.game-teams-chip');
+            if (chip && panel.contains(chip)) {
+                event.preventDefault();
+                if (selectedTeamChip && selectedTeamChip.key === chip.dataset.chipKey) {
+                    clearTeamSelection();
+                    return;
+                }
+                setTeamSelection(chip);
+                return;
+            }
+
+            if (!selectedTeamChip) {
+                return;
+            }
+
+            const side = event.target.closest('.game-teams-side[data-team]');
+            if (side && panel.contains(side)) {
+                event.preventDefault();
+                assignSelectedToTeam(parseInt(side.dataset.team, 10));
+                return;
+            }
+
+            const bench = event.target.closest('.game-teams-bench');
+            if (bench && panel.contains(bench)) {
+                event.preventDefault();
+                assignSelectedToTeam(null);
+            }
         });
     }
 
@@ -1105,6 +1579,9 @@
 
                 root.dataset.extraPlayers = String(data.extra_players);
                 root.dataset.availableSeats = String(data.available_seats);
+                if (data.team_roster) {
+                    applyTeamRoster(data.team_roster);
+                }
                 showStatus('Изменения сохранены', false);
             } catch (e) {
                 showStatus('Ошибка сети. Попробуйте ещё раз.', true);
@@ -1119,6 +1596,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         initMenu();
         initPlayersPanel();
+        initTeamsPanel();
         initManageAction();
         initMap();
         initJoinLeave();

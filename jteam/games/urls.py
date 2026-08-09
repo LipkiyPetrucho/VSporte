@@ -25,6 +25,11 @@ urlpatterns = [
         views.game_organizer_settings,
         name="organizer_settings",
     ),
+    path(
+        "detail/<int:id>/<slug:slug>/teams/",
+        views.game_teams,
+        name="teams",
+    ),
     path("detail/<int:id>/<slug:slug>/", views.game_detail, name="detail"),
     path("status/<int:id>/", views.game_status, name="status"),
     path("join/", views.game_join, name="join"),

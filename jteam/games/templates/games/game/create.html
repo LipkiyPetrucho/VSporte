@@ -102,6 +102,20 @@
                             <p class="create-event__field-error" style="padding: 0 20px 8px;">{{ form.max_players.errors.0 }}</p>
                         {% endif %}
 
+                        <div class="create-event__row create-event__row--plain">
+                            <div class="create-event__row-main">
+                                <i class="fas fa-users create-event__row-icon" aria-hidden="true"></i>
+                                <span class="create-event__row-label">Командная игра</span>
+                            </div>
+                            <label class="create-event__toggle">
+                                <input type="checkbox"
+                                       name="{{ form.is_team_game.html_name }}"
+                                       id="{{ form.is_team_game.id_for_label }}"
+                                       {% if form.is_team_game.value %}checked{% endif %}>
+                                <span class="create-event__toggle-slider"></span>
+                            </label>
+                        </div>
+
                         <div class="create-event__skill" data-skill-block>
                             <div class="create-event__row create-event__row--plain">
                                 <div class="create-event__row-main">

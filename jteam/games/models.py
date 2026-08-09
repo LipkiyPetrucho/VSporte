@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
@@ -88,6 +89,10 @@ class Game(models.Model):
         default="",
     )
     place_reserved = models.BooleanField(default=False)
+    is_team_game = models.BooleanField(
+        default=False,
+        help_text="Командная игра: составы A/B поверх общего пула участников",
+    )
     joined_players = models.ManyToManyField(
         settings.AUTH_USER_MODEL, related_name="joined_games", blank=True
     )
@@ -210,7 +215,193 @@ class Game(models.Model):
     def is_full(self):
         return self.available_seats() == 0
 
-    # ...Можно добавить проверку на существование игры перед генерацией URL-адреса.
+    def clear_team_assignments(self):
+        """Удаляет все назначения в команды для этой игры."""
+        return self.team_assignments.all().delete()
+
+    def clear_user_team_assignment(self, user):
+        """Удаляет назначение игрока при leave / kick / reject."""
+        user_id = getattr(user, "pk", user)
+        return self.team_assignments.filter(user_id=user_id).delete()
+
+    def trim_offline_team_assignments(self, extra_players=None):
+        """Удаляет назначения офлайн-слотов при уменьшении extra_players."""
+        limit = self.extra_players if extra_players is None else extra_players
+        return self.team_assignments.filter(
+            offline_slot__isnull=False,
+            offline_slot__gte=limit,
+        ).delete()
+
+    def cleanup_stale_team_assignments(self):
+        """Удаляет висящие assignments (не в пуле / офлайн вне диапазона).
+
+        Если is_team_game выключен — очищает все назначения.
+        """
+        if not self.is_team_game:
+            return self.clear_team_assignments()
+
+        joined_ids = set(self.joined_players.values_list("pk", flat=True))
+        stale_user_qs = self.team_assignments.filter(user__isnull=False).exclude(
+            user_id__in=joined_ids
+        )
+        deleted_users = stale_user_qs.delete()
+        deleted_offline = self.trim_offline_team_assignments(self.extra_players)
+        return deleted_users, deleted_offline
+
+    def team_roster(self):
+        """Актуальный roster: команды 1/2 и скамейка нераспределённых.
+
+        Возвращает dict:
+          teams: {1: [entries], 2: [entries]}
+          bench: [entries]
+
+        entry — либо online ({type, user_id, username, …}),
+        либо offline ({type, offline_slot, label}).
+        """
+        teams = {1: [], 2: []}
+        bench = []
+
+        joined = list(self.joined_players.all())
+        joined_by_id = {u.pk: u for u in joined}
+        assignments = list(self.team_assignments.select_related("user").all())
+
+        assigned_user_ids = set()
+        assigned_offline_slots = set()
+
+        for assignment in assignments:
+            if assignment.user_id is not None:
+                user = joined_by_id.get(assignment.user_id) or assignment.user
+                if user is None or assignment.user_id not in joined_by_id:
+                    continue
+                assigned_user_ids.add(assignment.user_id)
+                entry = {
+                    "type": "user",
+                    "user_id": user.pk,
+                    "username": user.get_username(),
+                }
+            else:
+                slot = assignment.offline_slot
+                if slot is None or slot >= self.extra_players:
+                    continue
+                assigned_offline_slots.add(slot)
+                entry = {
+                    "type": "offline",
+                    "offline_slot": slot,
+                    "label": f"Гость {slot + 1}",
+                }
+
+            if assignment.team in teams:
+                teams[assignment.team].append(entry)
+
+        for user in joined:
+            if user.pk not in assigned_user_ids:
+                bench.append(
+                    {
+                        "type": "user",
+                        "user_id": user.pk,
+                        "username": user.get_username(),
+                    }
+                )
+
+        for slot in range(self.extra_players):
+            if slot not in assigned_offline_slots:
+                bench.append(
+                    {
+                        "type": "offline",
+                        "offline_slot": slot,
+                        "label": f"Гость {slot + 1}",
+                    }
+                )
+
+        return {"teams": teams, "bench": bench}
+
+
+class GameTeamAssignment(models.Model):
+    """Назначение участника (онлайн или офлайн-слот) в команду A/B."""
+
+    TEAM_A = 1
+    TEAM_B = 2
+    TEAM_CHOICES = (
+        (TEAM_A, "Команда A"),
+        (TEAM_B, "Команда B"),
+    )
+
+    game = models.ForeignKey(
+        Game,
+        related_name="team_assignments",
+        on_delete=models.CASCADE,
+    )
+    team = models.PositiveSmallIntegerField(choices=TEAM_CHOICES)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="game_team_assignments",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
+    offline_slot = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Назначение в команду"
+        verbose_name_plural = "Назначения в команды"
+        constraints = [
+            models.CheckConstraint(
+                check=Q(team__in=[1, 2]),
+                name="game_team_assignment_team_valid",
+            ),
+            models.CheckConstraint(
+                check=(
+                    Q(user__isnull=False, offline_slot__isnull=True)
+                    | Q(user__isnull=True, offline_slot__isnull=False)
+                ),
+                name="game_team_assignment_user_xor_offline",
+            ),
+            models.UniqueConstraint(
+                fields=["game", "user"],
+                condition=Q(user__isnull=False),
+                name="unique_game_team_assignment_user",
+            ),
+            models.UniqueConstraint(
+                fields=["game", "offline_slot"],
+                condition=Q(offline_slot__isnull=False),
+                name="unique_game_team_assignment_offline",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["game", "team"]),
+        ]
+
+    def clean(self):
+        super().clean()
+        has_user = self.user_id is not None
+        has_offline = self.offline_slot is not None
+        if has_user == has_offline:
+            raise ValidationError(
+                "Нужно указать ровно одно из: user или offline_slot."
+            )
+        if self.team not in (self.TEAM_A, self.TEAM_B):
+            raise ValidationError({"team": "Команда должна быть 1 или 2."})
+        if has_offline and self.game_id and self.offline_slot >= self.game.extra_players:
+            raise ValidationError(
+                {
+                    "offline_slot": (
+                        f"Слот должен быть меньше extra_players "
+                        f"({self.game.extra_players})."
+                    )
+                }
+            )
+        if has_user and self.game_id:
+            if not self.game.joined_players.filter(pk=self.user_id).exists():
+                raise ValidationError(
+                    {"user": "Пользователь должен быть в joined_players."}
+                )
+
+    def __str__(self):
+        if self.user_id:
+            who = str(self.user_id)
+        else:
+            who = f"offline:{self.offline_slot}"
+        return f"game={self.game_id} team={self.team} {who}"
 
 
 class GameMessage(models.Model):

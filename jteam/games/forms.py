@@ -59,6 +59,10 @@ class GameCreateForm(forms.ModelForm):
         label="Место забронировано?",
         required=False,
     )
+    is_team_game = forms.BooleanField(
+        label="Командная игра",
+        required=False,
+    )
 
     class Meta:
         model = Game
@@ -70,6 +74,7 @@ class GameCreateForm(forms.ModelForm):
             "has_skill_level",
             "skill_level",
             "place_reserved",
+            "is_team_game",
             "start_time",
             "duration",
             "max_players",
@@ -84,6 +89,7 @@ class GameCreateForm(forms.ModelForm):
             "price": "Полная стоимость",
             "description": "Описание",
             "image": "Обложка",
+            "is_team_game": "Командная игра",
         }
 
         widgets = {
@@ -101,6 +107,7 @@ class GameCreateForm(forms.ModelForm):
             }),
             "has_skill_level": forms.CheckboxInput(),
             "place_reserved": forms.CheckboxInput(),
+            "is_team_game": forms.CheckboxInput(),
             "description": Textarea(attrs={
                 "class": "form-field",
                 "rows": 4,
@@ -213,6 +220,7 @@ GAME_CONDITION_FIELDS = (
     "has_skill_level",
     "skill_level",
     "place_reserved",
+    "is_team_game",
 )
 
 

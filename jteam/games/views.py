@@ -1,3 +1,5 @@
+import json
+import logging
 import redis
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.conf import settings
@@ -15,7 +17,6 @@ from actions.utils import create_action
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Greatest
 from django.db.models import Case, When, IntegerField, Q
-import logging
 from easy_thumbnails.files import get_thumbnailer
 from notifications.models import Notification
 from notifications.services import create_notification, notify_game_updated
@@ -28,7 +29,7 @@ from .forms import (
     game_conditions_changed,
     snapshot_game_conditions,
 )
-from .models import Game, GameParticipationRequest, GameInvitation
+from .models import Game, GameParticipationRequest, GameInvitation, GameTeamAssignment
 from .tasks import sync_game_statuses
 from .templatetags.game_extras import GAME_STATUS_LABELS
 
@@ -84,22 +85,66 @@ def _game_map_context(extra=None):
     return context
 
 
+def _player_thumb_url(player, size=(80, 80)):
+    photo = getattr(getattr(player, "profile", None), "photo", None)
+    if not photo:
+        return None
+    thumb_opts = {"size": size, "crop": True, "upscale": True}
+    return get_thumbnailer(photo).get_thumbnail(thumb_opts).url
+
+
 def _build_players_payload(game):
     players = []
     for player in game.joined_players.select_related("profile").all():
-        thumb_url = None
-        if player.profile.photo:
-            thumb_opts = {"size": (80, 80), "crop": True, "upscale": True}
-            thumb_url = get_thumbnailer(player.profile.photo).get_thumbnail(
-                thumb_opts
-            ).url
-
         players.append({
             "username": player.username,
-            "photo": thumb_url,
+            "photo": _player_thumb_url(player),
             "url": reverse("user_detail", args=[player.username]),
         })
     return players
+
+
+def _serialize_team_roster(game):
+    """Roster для JSON / SSR: teams + bench с photo/url у онлайн-игроков."""
+    roster = game.team_roster()
+    players_by_id = {
+        player.pk: player
+        for player in game.joined_players.select_related("profile").all()
+    }
+
+    def enrich(entry):
+        if entry.get("type") != "user":
+            return entry
+        player = players_by_id.get(entry["user_id"])
+        enriched = dict(entry)
+        if player is not None:
+            enriched["photo"] = _player_thumb_url(player)
+            enriched["url"] = reverse("user_detail", args=[player.username])
+        else:
+            enriched["photo"] = None
+            enriched["url"] = None
+        return enriched
+
+    return {
+        "teams": {
+            1: [enrich(e) for e in roster["teams"][1]],
+            2: [enrich(e) for e in roster["teams"][2]],
+        },
+        "bench": [enrich(e) for e in roster["bench"]],
+    }
+
+
+def _parse_request_payload(request):
+    """JSON body или form-data / querydict."""
+    content_type = (request.content_type or "").split(";")[0].strip().lower()
+    if content_type == "application/json":
+        try:
+            raw = request.body.decode("utf-8") if request.body else "{}"
+            data = json.loads(raw or "{}")
+        except (UnicodeDecodeError, json.JSONDecodeError, TypeError):
+            return None
+        return data if isinstance(data, dict) else None
+    return request.POST
 
 
 def _participation_status_for_user(game, user):
@@ -147,7 +192,7 @@ def _invitable_friends(game, organizer):
 
 
 def _join_response(game, user):
-    return JsonResponse({
+    payload = {
         "status": "ok",
         "players": _build_players_payload(game),
         "joined_count": game.joined_count(),
@@ -156,7 +201,10 @@ def _join_response(game, user):
         "max_players": game.max_players,
         "available_seats": game.available_seats(),
         "participation_status": _participation_status_for_user(game, user),
-    })
+    }
+    if game.is_team_game:
+        payload["team_roster"] = _serialize_team_roster(game)
+    return JsonResponse(payload)
 
 
 @login_required
@@ -247,6 +295,9 @@ def game_edit(request, id, slug):
                 edited_game.latitude = form.cleaned_data.get("latitude")
                 edited_game.longitude = form.cleaned_data.get("longitude")
                 edited_game.save()
+
+                if not edited_game.is_team_game:
+                    edited_game.clear_team_assignments()
 
                 if game_conditions_changed(before, edited_game):
                     notify_game_updated(edited_game, request.user)
@@ -360,6 +411,9 @@ def game_detail(request, id, slug):
             "pending_invitations": pending_invitations,
             "share_url": share_url,
             "share_text": share_text,
+            "team_roster": (
+                _serialize_team_roster(game) if game.is_team_game else None
+            ),
             **_game_map_context(),
         },
     )
@@ -661,6 +715,7 @@ def game_join(request):
                 "message": "Вы не участвуете в этой игре.",
             })
         game.joined_players.remove(request.user)
+        game.clear_user_team_assignment(request.user)
         if request.user != game.user:
             GameParticipationRequest.objects.filter(
                 game=game,
@@ -735,6 +790,7 @@ def game_participation(request):
 
         participation_request.status = GameParticipationRequest.REJECTED
         participation_request.save(update_fields=["status"])
+        game.clear_user_team_assignment(participation_request.user)
         create_notification(
             participation_request.user,
             request.user,
@@ -981,11 +1037,12 @@ def game_organizer_settings(request, id, slug):
     if place_reserved is not None:
         update_fields.append("place_reserved")
     game.save(update_fields=update_fields)
+    game.trim_offline_team_assignments(extra_players)
 
     if game_conditions_changed(before, game):
         notify_game_updated(game, request.user)
 
-    return JsonResponse({
+    payload = {
         "status": "ok",
         "extra_players": game.extra_players,
         "joined_count": game.joined_count(),
@@ -995,6 +1052,146 @@ def game_organizer_settings(request, id, slug):
         "total_cost": float(game.price * game.max_players),
         "place_reserved": game.place_reserved,
         "max_players": game.max_players,
+    }
+    if game.is_team_game:
+        payload["team_roster"] = _serialize_team_roster(game)
+    return JsonResponse(payload)
+
+
+@login_required
+@require_POST
+def game_teams(request, id, slug):
+    """Назначение участника в команду A/B или возврат на скамейку."""
+    game = get_object_or_404(Game, id=id, slug=slug)
+    game.sync_status()
+
+    if request.user != game.user:
+        return JsonResponse({"status": "error", "message": "Нет прав"}, status=403)
+
+    if game.status != "open":
+        return JsonResponse({
+            "status": "error",
+            "message": "Составы можно менять только у открытой игры.",
+        })
+
+    if not game.is_team_game:
+        return JsonResponse({
+            "status": "error",
+            "message": "Игра не является командной.",
+        })
+
+    data = _parse_request_payload(request)
+    if data is None:
+        return JsonResponse({
+            "status": "error",
+            "message": "Некорректный JSON.",
+        }, status=400)
+
+    has_user = "user_id" in data and data.get("user_id") is not None
+    has_offline = "offline_slot" in data and data.get("offline_slot") is not None
+    if has_user == has_offline:
+        return JsonResponse({
+            "status": "error",
+            "message": "Укажите ровно одно из: user_id или offline_slot.",
+        })
+
+    if "team" not in data:
+        return JsonResponse({
+            "status": "error",
+            "message": "Поле team обязательно (1, 2 или null).",
+        })
+
+    team_raw = data.get("team")
+    if team_raw is None or team_raw == "":
+        team = None
+    else:
+        try:
+            team = int(team_raw)
+        except (TypeError, ValueError):
+            return JsonResponse({
+                "status": "error",
+                "message": "Команда должна быть 1, 2 или null.",
+            })
+        if team not in (GameTeamAssignment.TEAM_A, GameTeamAssignment.TEAM_B):
+            return JsonResponse({
+                "status": "error",
+                "message": "Команда должна быть 1, 2 или null.",
+            })
+
+    user_id = None
+    offline_slot = None
+
+    if has_user:
+        try:
+            user_id = int(data.get("user_id"))
+        except (TypeError, ValueError):
+            return JsonResponse({
+                "status": "error",
+                "message": "Некорректный user_id.",
+            })
+        if not game.joined_players.filter(pk=user_id).exists():
+            return JsonResponse({
+                "status": "error",
+                "message": "Игрок не в составе игры.",
+            })
+    else:
+        try:
+            offline_slot = int(data.get("offline_slot"))
+        except (TypeError, ValueError):
+            return JsonResponse({
+                "status": "error",
+                "message": "Некорректный offline_slot.",
+            })
+        if offline_slot < 0 or offline_slot >= game.extra_players:
+            return JsonResponse({
+                "status": "error",
+                "message": "Офлайн-слот вне диапазона extra_players.",
+            })
+
+    if team is None:
+        if user_id is not None:
+            game.clear_user_team_assignment(user_id)
+        else:
+            game.team_assignments.filter(offline_slot=offline_slot).delete()
+    else:
+        if user_id is not None:
+            assignment = game.team_assignments.filter(user_id=user_id).first()
+            if assignment is None:
+                assignment = GameTeamAssignment(
+                    game=game,
+                    user_id=user_id,
+                    team=team,
+                )
+            else:
+                assignment.team = team
+        else:
+            assignment = game.team_assignments.filter(
+                offline_slot=offline_slot
+            ).first()
+            if assignment is None:
+                assignment = GameTeamAssignment(
+                    game=game,
+                    offline_slot=offline_slot,
+                    team=team,
+                )
+            else:
+                assignment.team = team
+
+        try:
+            assignment.full_clean()
+            assignment.save()
+        except ValidationError as exc:
+            if hasattr(exc, "message_dict"):
+                message = "; ".join(
+                    err for errors in exc.message_dict.values() for err in errors
+                )
+            else:
+                message = "; ".join(exc.messages) if hasattr(exc, "messages") else str(exc)
+            return JsonResponse({"status": "error", "message": message})
+
+    return JsonResponse({
+        "status": "ok",
+        "team_roster": _serialize_team_roster(game),
     })
 
 

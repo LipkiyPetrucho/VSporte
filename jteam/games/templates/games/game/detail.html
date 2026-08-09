@@ -26,7 +26,9 @@
      data-chat-url="{% url 'games:chat' game.id game.slug %}"
      data-organizer-username="{{ game.user.username }}"
      data-current-username="{% if request.user.is_authenticated %}{{ request.user.username }}{% endif %}"
-     data-is-organizer="{% if is_organizer %}1{% else %}0{% endif %}">
+     data-is-organizer="{% if is_organizer %}1{% else %}0{% endif %}"
+     data-is-team-game="{% if game.is_team_game %}1{% else %}0{% endif %}"
+     {% if game.is_team_game %}data-teams-url="{% url 'games:teams' game.id game.slug %}"{% endif %}>
   <header class="game-view-header{% if game.image %} game-view-header--has-cover{% endif %}">
     {% if game.image %}
       <img src="{{ game.image.url }}" alt="" class="game-view-header-cover">
@@ -149,6 +151,18 @@
                   {% else %}
                     <a href="{{ player.get_absolute_url }}" class="game-view-participant-name">{{ player.username }}</a>
                   {% endif %}
+                  {% if game.is_team_game and team_roster %}
+                    {% for entry in team_roster.teams.1 %}
+                      {% if entry.type == 'user' and entry.user_id == player.pk %}
+                        <span class="game-view-team-badge game-view-team-badge--a" title="Команда A" aria-label="Команда A">A</span>
+                      {% endif %}
+                    {% endfor %}
+                    {% for entry in team_roster.teams.2 %}
+                      {% if entry.type == 'user' and entry.user_id == player.pk %}
+                        <span class="game-view-team-badge game-view-team-badge--b" title="Команда B" aria-label="Команда B">B</span>
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
                   {% if player == game.user %}
                     <span class="game-view-badge">Организатор</span>
                     <span class="game-view-extra-count"
@@ -172,7 +186,7 @@
           {% endif %}
         </div>
 
-        <div class="game-view-actions">
+        <div class="game-view-actions{% if game.is_team_game %} game-view-actions--with-teams{% endif %}">
           {% if game.status == 'open' %}
             {% if is_joined %}
               <button type="button"
@@ -255,6 +269,13 @@
             <span class="game-view-action-icon"><i class="fas fa-arrow-right"></i></span>
             Игроки
           </button>
+
+          {% if game.is_team_game %}
+            <button type="button" class="game-view-action" id="game-action-teams">
+              <span class="game-view-action-icon"><i class="fas fa-people-group"></i></span>
+              Составы
+            </button>
+          {% endif %}
         </div>
 
         <div class="game-view-players-panel" id="players-panel" hidden>
@@ -278,6 +299,53 @@
             {% endif %}
           </div>
         </div>
+
+        {% if game.is_team_game %}
+          {{ team_roster|json_script:"team-roster-data" }}
+          <div class="game-view-teams-panel{% if is_organizer and game.status == 'open' %} game-view-teams-panel--editable{% endif %}"
+               id="teams-panel"
+               hidden
+               data-editable="{% if is_organizer and game.status == 'open' %}1{% else %}0{% endif %}"
+               aria-label="Составы команд">
+            <div class="game-teams-versus">
+              <section class="game-teams-side game-teams-side--a"
+                       data-team="1"
+                       aria-label="Команда A">
+                <header class="game-teams-side__head">
+                  <span class="game-teams-side__mark" aria-hidden="true">A</span>
+                  <h3 class="game-teams-side__title">Команда A</h3>
+                </header>
+                <div class="game-teams-slots" id="team-a-slots" data-team-slots="1"></div>
+              </section>
+
+              <div class="game-teams-vs" aria-hidden="true">VS</div>
+
+              <section class="game-teams-side game-teams-side--b"
+                       data-team="2"
+                       aria-label="Команда B">
+                <header class="game-teams-side__head">
+                  <span class="game-teams-side__mark" aria-hidden="true">B</span>
+                  <h3 class="game-teams-side__title">Команда B</h3>
+                </header>
+                <div class="game-teams-slots" id="team-b-slots" data-team-slots="2"></div>
+              </section>
+            </div>
+
+            <section class="game-teams-bench" data-team="bench" aria-label="Скамейка">
+              <h3 class="game-teams-bench__title">Скамейка</h3>
+              <div class="game-teams-bench-list" id="team-bench"></div>
+            </section>
+
+            <p class="game-teams-hint" id="teams-hint">
+              {% if is_organizer and game.status == 'open' %}
+                Выберите игрока, затем нажмите на команду или скамейку
+              {% else %}
+                Составы задаёт организатор
+              {% endif %}
+            </p>
+            <p class="game-teams-status" id="teams-status" hidden></p>
+          </div>
+        {% endif %}
 
         {% if is_organizer and pending_invitations %}
           <div class="game-view-requests game-view-invitations" id="pending-invitations-block">
@@ -404,6 +472,15 @@
                       title="Поделиться">
                 <i class="fas fa-share-alt"></i>
               </button>
+              {% if game.is_team_game %}
+                <button type="button"
+                        class="game-organizer-panel__action"
+                        id="organizer-teams-btn"
+                        aria-label="Составы"
+                        title="Составы">
+                  <i class="fas fa-people-group"></i>
+                </button>
+              {% endif %}
             </div>
 
             {% if game.status == 'open' %}

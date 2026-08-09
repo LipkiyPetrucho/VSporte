@@ -1,9 +1,12 @@
 from django.test import TestCase
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 from datetime import timedelta
 from freezegun import freeze_time
-from .models import Game
+import json
+from account.models import Profile
+from .models import Game, GameTeamAssignment
 from .tasks import update_game_status
 
 class GameStatusUpdateTest(TestCase):
@@ -151,3 +154,232 @@ class GameStatusUpdateTest(TestCase):
         )
         past_game.sync_status()
         self.assertEqual(past_game.status, 'finished')
+
+
+class GameTeamsApiTest(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.organizer = User.objects.create_user(
+            username="organizer",
+            password="testpass123",
+        )
+        Profile.objects.get_or_create(user=self.organizer)
+
+        self.player = User.objects.create_user(
+            username="player1",
+            password="testpass123",
+        )
+        Profile.objects.get_or_create(user=self.player)
+
+        self.outsider = User.objects.create_user(
+            username="outsider",
+            password="testpass123",
+        )
+        Profile.objects.get_or_create(user=self.outsider)
+
+        self.game = Game.objects.create(
+            user=self.organizer,
+            sport="football",
+            place="Test Arena",
+            start_time=timezone.now() + timedelta(hours=2),
+            duration=timedelta(hours=1),
+            price=100,
+            max_players=10,
+            extra_players=2,
+            is_team_game=True,
+            status="open",
+            slug="football-test-teams",
+        )
+        self.game.joined_players.add(self.organizer, self.player)
+        self.teams_url = reverse(
+            "games:teams",
+            args=[self.game.pk, self.game.slug],
+        )
+
+    def _post_teams(self, payload, user=None):
+        self.client.force_login(user or self.organizer)
+        return self.client.post(
+            self.teams_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    def test_assign_and_unassign_user(self):
+        response = self._post_teams({"user_id": self.player.pk, "team": 1})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "ok")
+        self.assertTrue(
+            GameTeamAssignment.objects.filter(
+                game=self.game,
+                user=self.player,
+                team=1,
+            ).exists()
+        )
+        team_a_ids = [e["user_id"] for e in data["team_roster"]["teams"]["1"]]
+        self.assertIn(self.player.pk, team_a_ids)
+
+        response = self._post_teams({"user_id": self.player.pk, "team": None})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertFalse(
+            GameTeamAssignment.objects.filter(
+                game=self.game,
+                user=self.player,
+            ).exists()
+        )
+        bench_ids = [
+            e["user_id"]
+            for e in data["team_roster"]["bench"]
+            if e["type"] == "user"
+        ]
+        self.assertIn(self.player.pk, bench_ids)
+
+    def test_assign_offline_slot(self):
+        response = self._post_teams({"offline_slot": 0, "team": 2})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "ok")
+        self.assertTrue(
+            GameTeamAssignment.objects.filter(
+                game=self.game,
+                offline_slot=0,
+                team=2,
+            ).exists()
+        )
+        team_b = data["team_roster"]["teams"]["2"]
+        self.assertTrue(any(e.get("offline_slot") == 0 for e in team_b))
+
+    def test_unassign_offline_slot(self):
+        self._post_teams({"offline_slot": 1, "team": 1})
+        response = self._post_teams({"offline_slot": 1, "team": None})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "ok")
+        self.assertFalse(
+            GameTeamAssignment.objects.filter(
+                game=self.game,
+                offline_slot=1,
+            ).exists()
+        )
+        bench_slots = [
+            e["offline_slot"]
+            for e in data["team_roster"]["bench"]
+            if e["type"] == "offline"
+        ]
+        self.assertIn(1, bench_slots)
+
+    def test_reassign_user_between_teams(self):
+        self._post_teams({"user_id": self.player.pk, "team": 1})
+        response = self._post_teams({"user_id": self.player.pk, "team": 2})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "ok")
+        assignment = GameTeamAssignment.objects.get(
+            game=self.game,
+            user=self.player,
+        )
+        self.assertEqual(assignment.team, 2)
+        self.assertEqual(
+            GameTeamAssignment.objects.filter(
+                game=self.game,
+                user=self.player,
+            ).count(),
+            1,
+        )
+        team_b_ids = [e["user_id"] for e in data["team_roster"]["teams"]["2"]]
+        self.assertIn(self.player.pk, team_b_ids)
+
+    def test_leave_clears_assignment(self):
+        GameTeamAssignment.objects.create(
+            game=self.game,
+            user=self.player,
+            team=1,
+        )
+        self.client.force_login(self.player)
+        response = self.client.post(
+            reverse("games:join"),
+            {"id": self.game.pk, "action": "leave"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "ok")
+        self.assertFalse(
+            GameTeamAssignment.objects.filter(
+                game=self.game,
+                user=self.player,
+            ).exists()
+        )
+
+    def test_extra_players_trim_clears_offline_assignments(self):
+        GameTeamAssignment.objects.create(
+            game=self.game,
+            offline_slot=1,
+            team=1,
+        )
+        GameTeamAssignment.objects.create(
+            game=self.game,
+            offline_slot=0,
+            team=2,
+        )
+        self.client.force_login(self.organizer)
+        response = self.client.post(
+            reverse(
+                "games:organizer_settings",
+                args=[self.game.pk, self.game.slug],
+            ),
+            {"extra_players": "1"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "ok")
+        self.assertEqual(data["extra_players"], 1)
+        self.assertFalse(
+            GameTeamAssignment.objects.filter(
+                game=self.game,
+                offline_slot=1,
+            ).exists()
+        )
+        self.assertTrue(
+            GameTeamAssignment.objects.filter(
+                game=self.game,
+                offline_slot=0,
+            ).exists()
+        )
+        self.assertIn("team_roster", data)
+
+    def test_non_organizer_forbidden(self):
+        response = self._post_teams(
+            {"user_id": self.player.pk, "team": 1},
+            user=self.player,
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_rejects_non_joined_user(self):
+        response = self._post_teams({"user_id": self.outsider.pk, "team": 1})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "error")
+        self.assertFalse(
+            GameTeamAssignment.objects.filter(
+                game=self.game,
+                user=self.outsider,
+            ).exists()
+        )
+
+    def test_rejects_when_not_team_game(self):
+        self.game.is_team_game = False
+        self.game.save(update_fields=["is_team_game"])
+        response = self._post_teams({"user_id": self.player.pk, "team": 1})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "error")
+
+    def test_rejects_offline_slot_out_of_range(self):
+        response = self._post_teams({"offline_slot": 2, "team": 1})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "error")
+        self.assertFalse(
+            GameTeamAssignment.objects.filter(
+                game=self.game,
+                offline_slot=2,
+            ).exists()
+        )
