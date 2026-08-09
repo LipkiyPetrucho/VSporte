@@ -40,15 +40,15 @@
     </nav>
 
     <nav class="games-page-tabs" aria-label="Разделы событий">
-        <a href="?tab=calendar{% if request.GET.sport %}&sport={{ request.GET.sport }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+        <a href="?tab=calendar{% if request.GET.sport %}&sport={{ request.GET.sport }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search|urlencode }}{% endif %}{% if open_only %}&open_only=1{% endif %}"
            class="games-page-tabs__item{% if active_tab == 'calendar' %} games-page-tabs__item--active{% endif %}">
             Календарь
         </a>
-        <a href="?tab=my_sport{% if request.GET.sport %}&sport={{ request.GET.sport }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+        <a href="?tab=my_sport{% if request.GET.sport %}&sport={{ request.GET.sport }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search|urlencode }}{% endif %}{% if open_only %}&open_only=1{% endif %}"
            class="games-page-tabs__item{% if active_tab == 'my_sport' %} games-page-tabs__item--active{% endif %}">
             Мой спорт
         </a>
-        <a href="?tab=other{% if request.GET.sport %}&sport={{ request.GET.sport }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+        <a href="?tab=other{% if request.GET.sport %}&sport={{ request.GET.sport }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search|urlencode }}{% endif %}{% if open_only %}&open_only=1{% endif %}"
            class="games-page-tabs__item{% if active_tab == 'other' %} games-page-tabs__item--active{% endif %}">
             Другое
         </a>
@@ -58,6 +58,13 @@
         <a href="{% url 'games:create' %}" class="games-page-create-btn text-decoration-none">
             <span class="games-page-create-btn__icon"><i class="fas fa-plus"></i></span>
             Создать мероприятие
+        </a>
+        <a href="?tab={{ active_tab }}{% if request.GET.sport %}&sport={{ request.GET.sport }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search|urlencode }}{% endif %}{% if not open_only %}&open_only=1{% endif %}"
+           class="games-page-open-only-btn{% if open_only %} is-active{% endif %}"
+           title="{% if open_only %}Показать все события{% else %}Скрыть завершённые{% endif %}"
+           aria-pressed="{% if open_only %}true{% else %}false{% endif %}">
+            <i class="fas fa-door-open" aria-hidden="true"></i>
+            <span>Открытые</span>
         </a>
         <button type="button"
                 class="games-page-filter-btn"
@@ -72,6 +79,9 @@
     <div class="games-page-filter" id="games-page-filter" hidden>
         <form method="get" class="games-page-filter__form">
             <input type="hidden" name="tab" value="{{ active_tab }}">
+            {% if open_only %}
+              <input type="hidden" name="open_only" value="1">
+            {% endif %}
             <div class="games-page-filter__field">
                 <label for="{{ filter_form.sport.id_for_label }}">Спорт</label>
                 {{ filter_form.sport }}
@@ -87,6 +97,14 @@
     <div id="game-list" class="games-page-list">
         {% include "games/game/list_games.html" %}
     </div>
+
+    {% if games.has_next %}
+      <div class="games-page-more">
+        <button type="button" class="games-page-more__btn" id="games-page-more-btn">
+          Ещё
+        </button>
+      </div>
+    {% endif %}
 </div>
 {% endblock %}
 
@@ -94,12 +112,23 @@
 var page = 1;
 var emptyPage = false;
 var blockRequest = false;
+var moreBtn = document.getElementById('games-page-more-btn');
+var moreWrap = moreBtn ? moreBtn.closest('.games-page-more') : null;
+
+function hideMoreButton() {
+    if (moreWrap) {
+        moreWrap.hidden = true;
+    }
+}
 
 function loadMoreGames() {
     if (emptyPage || blockRequest) {
         return;
     }
     blockRequest = true;
+    if (moreBtn) {
+        moreBtn.disabled = true;
+    }
     page += 1;
 
     var urlParams = new URLSearchParams(window.location.search);
@@ -107,26 +136,45 @@ function loadMoreGames() {
     urlParams.set('games_only', '1');
 
     fetch('?' + urlParams.toString())
-    .then(function(response) { return response.text(); })
-    .then(function(html) {
-        if (html === '') {
+    .then(function(response) {
+        var hasNext = response.headers.get('X-Has-Next');
+        return response.text().then(function(html) {
+            return { html: html, hasNext: hasNext };
+        });
+    })
+    .then(function(result) {
+        var html = result.html;
+        if (!html || !html.trim()) {
             emptyPage = true;
-        } else {
-            var gameList = document.getElementById('game-list');
-            if (gameList) {
-                gameList.insertAdjacentHTML('beforeEnd', html);
-            }
-            blockRequest = false;
+            hideMoreButton();
+            return;
+        }
+        var gameList = document.getElementById('game-list');
+        if (gameList) {
+            gameList.insertAdjacentHTML('beforeEnd', html);
+        }
+        if (result.hasNext === '0') {
+            emptyPage = true;
+            hideMoreButton();
+            return;
+        }
+        blockRequest = false;
+        if (moreBtn) {
+            moreBtn.disabled = false;
+        }
+    })
+    .catch(function() {
+        blockRequest = false;
+        page -= 1;
+        if (moreBtn) {
+            moreBtn.disabled = false;
         }
     });
 }
 
-window.addEventListener('scroll', function() {
-    var margin = document.body.clientHeight - window.innerHeight - 200;
-    if (window.pageYOffset > margin) {
-        loadMoreGames();
-    }
-});
+if (moreBtn) {
+    moreBtn.addEventListener('click', loadMoreGames);
+}
 
 var menuToggle = document.getElementById('games-page-menu-toggle');
 var pageMenu = document.getElementById('games-page-menu');
@@ -147,7 +195,4 @@ if (filterToggle && pageFilter) {
         filterToggle.setAttribute('aria-expanded', String(!isOpen));
     });
 }
-
-var scrollEvent = new Event('scroll');
-window.dispatchEvent(scrollEvent);
 {% endblock %}

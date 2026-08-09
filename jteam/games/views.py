@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -97,6 +97,7 @@ def _build_players_payload(game):
     players = []
     for player in game.joined_players.select_related("profile").all():
         players.append({
+            "id": player.pk,
             "username": player.username,
             "photo": _player_thumb_url(player),
             "url": reverse("user_detail", args=[player.username]),
@@ -464,7 +465,8 @@ def game_chat(request, id, slug):
     """Страница чата игры: история сообщений (realtime — через WebSocket)."""
     game = get_object_or_404(Game, id=id, slug=slug)
     if not game.user_can_access_chat(request.user):
-        raise PermissionDenied
+        messages.error(request, "Чат доступен только участникам игры")
+        return redirect(game.get_absolute_url())
     chat_messages = _latest_chat_messages(game)
     return render(
         request,
@@ -486,7 +488,10 @@ def game_chat_messages(request, id, slug):
     """JSON-история сообщений чата (?after_id= для подгрузки новых)."""
     game = get_object_or_404(Game, id=id, slug=slug)
     if not game.user_can_access_chat(request.user):
-        raise PermissionDenied
+        return JsonResponse(
+            {"status": "error", "message": "Чат доступен только участникам игры"},
+            status=403,
+        )
 
     after_id = request.GET.get("after_id")
     qs = _chat_messages_queryset(game)
@@ -530,6 +535,8 @@ def game_list(request):
     if active_tab not in {"calendar", "my_sport", "other"}:
         active_tab = "my_sport"
 
+    open_only = request.GET.get("open_only") in {"1", "true", "yes", "on"}
+
     user_sports = (
         Game.objects.filter(Q(user=request.user) | Q(joined_players=request.user))
         .values_list("sport", flat=True)
@@ -540,6 +547,9 @@ def game_list(request):
         games = games.filter(sport__in=user_sports)
     elif active_tab == "other" and user_sports:
         games = games.exclude(sport__in=user_sports)
+
+    if open_only:
+        games = games.filter(status="open")
 
     # Активные игры сверху (новые первыми), завершённые — внизу
     games = games.annotate(
@@ -571,8 +581,8 @@ def game_list(request):
                 )
             ).filter(similarity__gt=0.1).order_by("-similarity", "status_priority", "-start_time")
 
-    # Пагинация
-    paginator = Paginator(games, 12)
+    # Пагинация: по 6 карточек, дальше — кнопка «Ещё»
+    paginator = Paginator(games, 6)
     page = request.GET.get("page")
     games_only = request.GET.get("games_only")
     
@@ -589,11 +599,13 @@ def game_list(request):
         games = paginator.page(paginator.num_pages)
     
     if games_only:
-        return render(
+        response = render(
             request,
             "games/game/list_games.html",
             {"section": "games", "games": games},
         )
+        response["X-Has-Next"] = "1" if games.has_next() else "0"
+        return response
 
     return render(
         request,
@@ -603,6 +615,7 @@ def game_list(request):
             "games": games,
             "filter_form": form,
             "active_tab": active_tab,
+            "open_only": open_only,
         },
     )
 
@@ -722,6 +735,52 @@ def game_join(request):
                 user=request.user,
                 status=GameParticipationRequest.ACCEPTED,
             ).update(status=GameParticipationRequest.CANCELLED)
+        return _join_response(game, request.user)
+
+    if action == "remove_player":
+        if request.user != game.user:
+            return JsonResponse({
+                "status": "error",
+                "message": "Только организатор может удалить участника.",
+            })
+        user_id = request.POST.get("user_id")
+        if not user_id:
+            return JsonResponse({"status": "error"})
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            return JsonResponse({"status": "error"})
+
+        player = game.joined_players.filter(pk=user_id).first()
+        if player is None:
+            return JsonResponse({
+                "status": "error",
+                "message": "Участник не найден.",
+            })
+        if player.pk == game.user_id:
+            return JsonResponse({
+                "status": "error",
+                "message": "Нельзя удалить организатора.",
+            })
+
+        game.joined_players.remove(player)
+        game.clear_user_team_assignment(player)
+        GameParticipationRequest.objects.filter(
+            game=game,
+            user=player,
+            status=GameParticipationRequest.ACCEPTED,
+        ).update(status=GameParticipationRequest.CANCELLED)
+        GameInvitation.objects.filter(
+            game=game,
+            to_user=player,
+            status=GameInvitation.ACCEPTED,
+        ).update(status=GameInvitation.CANCELLED)
+        create_notification(
+            player,
+            request.user,
+            Notification.TYPE_GAME_PLAYER_REMOVED,
+            game,
+        )
         return _join_response(game, request.user)
 
     return JsonResponse({"status": "error"})

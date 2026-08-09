@@ -383,3 +383,156 @@ class GameTeamsApiTest(TestCase):
                 offline_slot=2,
             ).exists()
         )
+
+
+class GameChatAccessTest(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.organizer = User.objects.create_user(
+            username="chat_org",
+            password="testpass123",
+        )
+        Profile.objects.get_or_create(user=self.organizer)
+
+        self.player = User.objects.create_user(
+            username="chat_player",
+            password="testpass123",
+        )
+        Profile.objects.get_or_create(user=self.player)
+
+        self.outsider = User.objects.create_user(
+            username="chat_outsider",
+            password="testpass123",
+        )
+        Profile.objects.get_or_create(user=self.outsider)
+
+        self.game = Game.objects.create(
+            user=self.organizer,
+            sport="football",
+            place="Chat Arena",
+            start_time=timezone.now() + timedelta(hours=2),
+            duration=timedelta(hours=1),
+            price=100,
+            max_players=10,
+            status="open",
+            slug="football-test-chat",
+        )
+        self.game.joined_players.add(self.organizer, self.player)
+        self.chat_url = reverse(
+            "games:chat",
+            args=[self.game.pk, self.game.slug],
+        )
+        self.messages_url = reverse(
+            "games:chat_messages",
+            args=[self.game.pk, self.game.slug],
+        )
+
+    def test_participant_can_open_chat(self):
+        self.client.force_login(self.player)
+        response = self.client.get(self.chat_url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_outsider_redirected_from_chat(self):
+        self.client.force_login(self.outsider)
+        response = self.client.get(self.chat_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, self.game.get_absolute_url())
+
+    def test_outsider_messages_api_forbidden(self):
+        self.client.force_login(self.outsider)
+        response = self.client.get(self.messages_url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["status"], "error")
+
+
+class GameRemovePlayerTest(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.organizer = User.objects.create_user(
+            username="remove_org",
+            password="testpass123",
+        )
+        Profile.objects.get_or_create(user=self.organizer)
+
+        self.player = User.objects.create_user(
+            username="remove_player",
+            password="testpass123",
+        )
+        Profile.objects.get_or_create(user=self.player)
+
+        self.outsider = User.objects.create_user(
+            username="remove_outsider",
+            password="testpass123",
+        )
+        Profile.objects.get_or_create(user=self.outsider)
+
+        self.game = Game.objects.create(
+            user=self.organizer,
+            sport="football",
+            place="Remove Arena",
+            start_time=timezone.now() + timedelta(hours=2),
+            duration=timedelta(hours=1),
+            price=100,
+            max_players=10,
+            is_team_game=True,
+            status="open",
+            slug="football-test-remove",
+        )
+        self.game.joined_players.add(self.organizer, self.player)
+        GameTeamAssignment.objects.create(
+            game=self.game,
+            user=self.player,
+            team=1,
+        )
+        self.join_url = reverse("games:join")
+
+    def _remove(self, user_id, as_user=None):
+        self.client.force_login(as_user or self.organizer)
+        return self.client.post(
+            self.join_url,
+            {
+                "id": self.game.pk,
+                "action": "remove_player",
+                "user_id": user_id,
+            },
+        )
+
+    def test_organizer_can_remove_player(self):
+        from notifications.models import Notification
+
+        response = self._remove(self.player.pk)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "ok")
+        self.assertFalse(
+            self.game.joined_players.filter(pk=self.player.pk).exists()
+        )
+        self.assertFalse(
+            GameTeamAssignment.objects.filter(
+                game=self.game,
+                user=self.player,
+            ).exists()
+        )
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.player,
+                actor=self.organizer,
+                notification_type=Notification.TYPE_GAME_PLAYER_REMOVED,
+            ).exists()
+        )
+
+    def test_cannot_remove_organizer(self):
+        response = self._remove(self.organizer.pk)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "error")
+        self.assertTrue(
+            self.game.joined_players.filter(pk=self.organizer.pk).exists()
+        )
+
+    def test_non_organizer_forbidden(self):
+        response = self._remove(self.player.pk, as_user=self.outsider)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "error")
+        self.assertTrue(
+            self.game.joined_players.filter(pk=self.player.pk).exists()
+        )

@@ -170,6 +170,17 @@
                           {% if not game.extra_players %}hidden{% endif %}>+{{ game.extra_players }}</span>
                   {% endif %}
                 </div>
+                {% if is_organizer and game.status == 'open' and player != game.user %}
+                  <button type="button"
+                          class="game-view-participant-remove"
+                          data-action="remove_player"
+                          data-user-id="{{ player.pk }}"
+                          data-username="{{ player.username }}"
+                          title="Удалить участника"
+                          aria-label="Удалить {{ player.username }}">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                  </button>
+                {% endif %}
               </div>
             {% endfor %}
             {% if game.extra_players and game.user not in game.joined_players.all %}

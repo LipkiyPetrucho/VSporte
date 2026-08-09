@@ -1,5 +1,11 @@
 <div class="game-view-chat-block">
-  <a href="{% url 'games:chat' game.id game.slug %}" class="game-view-chat-btn">Чат</a>
+  {% if is_organizer or is_joined %}
+    <a href="{% url 'games:chat' game.id game.slug %}" class="game-view-chat-btn">Чат</a>
+  {% else %}
+    <span class="game-view-chat-btn game-view-chat-btn--disabled"
+          title="Чат доступен только участникам игры"
+          aria-disabled="true">Чат</span>
+  {% endif %}
   <div class="game-view-chat-footer">
   <span>
     {% if is_organizer %}

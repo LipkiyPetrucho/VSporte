@@ -307,6 +307,29 @@ body.page-game-detail .game-view {
     flex-wrap: wrap;
     gap: 8px;
     min-width: 0;
+    flex: 1;
+}
+
+.game-view-participant-remove {
+    margin-left: auto;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: #f1f1f1;
+    color: #8a8a8a;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.game-view-participant-remove:hover {
+    background: #f8d7da;
+    color: #a33;
 }
 
 .game-view-extra-count {
@@ -773,6 +796,17 @@ body.page-game-detail .game-view {
 .game-view-chat-btn:hover {
     background: #6d8d78;
     color: #fff;
+}
+
+.game-view-chat-btn--disabled {
+    background: #b8c4bc;
+    color: #f5f7f6;
+    cursor: not-allowed;
+}
+
+.game-view-chat-btn--disabled:hover {
+    background: #b8c4bc;
+    color: #f5f7f6;
 }
 
 .game-view-chat-footer {

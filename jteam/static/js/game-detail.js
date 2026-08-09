@@ -262,10 +262,31 @@
             )
             : '';
 
+        const root = document.querySelector('.game-view');
+        const canRemove = root
+            && root.dataset.isOrganizer === '1'
+            && root.dataset.gameStatus === 'open'
+            && !isOrganizer
+            && player.id;
+
+        const removeBtn = canRemove
+            ? (
+                '<button type="button" class="game-view-participant-remove"' +
+                ' data-action="remove_player"' +
+                ' data-user-id="' + player.id + '"' +
+                ' data-username="' + escapeHtml(player.username) + '"' +
+                ' title="Удалить участника"' +
+                ' aria-label="Удалить ' + escapeHtml(player.username) + '">' +
+                '<i class="fas fa-times" aria-hidden="true"></i>' +
+                '</button>'
+            )
+            : '';
+
         return (
             '<div class="game-view-participant' + (isOrganizer ? ' game-view-participant--organizer' : '') + '">' +
                 avatar +
                 '<div class="game-view-participant-meta">' + name + teamBadge + badge + extraBadge + '</div>' +
+                removeBtn +
             '</div>'
         );
     }
@@ -874,6 +895,60 @@
                     : (action === 'join' ? 'cancel_request' : 'join'),
                 gameId
             );
+        });
+    }
+
+    function initRemovePlayer() {
+        const root = document.querySelector('.game-view');
+        if (!root || root.dataset.isOrganizer !== '1') {
+            return;
+        }
+
+        const joinUrl = root.dataset.joinUrl;
+        const gameId = root.dataset.gameId;
+        const organizerUsername = root.dataset.organizerUsername || '';
+        const currentUsername = root.dataset.currentUsername || '';
+
+        document.addEventListener('click', async function (event) {
+            const btn = event.target.closest('[data-action="remove_player"]');
+            if (!btn || !root.contains(btn)) {
+                return;
+            }
+
+            event.preventDefault();
+            if (root.dataset.gameStatus !== 'open') {
+                return;
+            }
+
+            const username = btn.dataset.username || 'участника';
+            if (!window.confirm('Удалить ' + username + ' из мероприятия?')) {
+                return;
+            }
+
+            btn.disabled = true;
+            const body = new FormData();
+            body.append('id', gameId);
+            body.append('action', 'remove_player');
+            body.append('user_id', btn.dataset.userId);
+
+            try {
+                const response = await fetch(joinUrl, {
+                    method: 'POST',
+                    mode: 'same-origin',
+                    headers: { 'X-CSRFToken': getCsrfToken() },
+                    body: body,
+                });
+                const data = await response.json();
+                if (data.status !== 'ok') {
+                    alert(data.message || 'Не удалось удалить участника');
+                    btn.disabled = false;
+                    return;
+                }
+                syncParticipantsFromResponse(data, currentUsername, organizerUsername);
+            } catch (e) {
+                alert('Ошибка сети. Попробуйте ещё раз.');
+                btn.disabled = false;
+            }
         });
     }
 
@@ -1600,6 +1675,7 @@
         initManageAction();
         initMap();
         initJoinLeave();
+        initRemovePlayer();
         initParticipationActions();
         initInvitationActions();
         initInviteModal();

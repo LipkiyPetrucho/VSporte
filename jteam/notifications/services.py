@@ -16,6 +16,7 @@ GAME_NOTIFICATION_TYPES = {
     Notification.TYPE_GAME_INVITATION,
     Notification.TYPE_GAME_PARTICIPATION_ACCEPTED,
     Notification.TYPE_GAME_PARTICIPATION_REJECTED,
+    Notification.TYPE_GAME_PLAYER_REMOVED,
     Notification.TYPE_CHAT_MESSAGE,
     Notification.TYPE_GAME_UPDATED,
 }
@@ -29,6 +30,7 @@ NOTIFICATION_TYPE_PREF_FIELD = {
     Notification.TYPE_GAME_INVITATION: "notify_activity_updates",
     Notification.TYPE_GAME_PARTICIPATION_ACCEPTED: "notify_activity_updates",
     Notification.TYPE_GAME_PARTICIPATION_REJECTED: "notify_activity_updates",
+    Notification.TYPE_GAME_PLAYER_REMOVED: "notify_activity_updates",
     Notification.TYPE_CHAT_MESSAGE: "notify_chat_messages",
     Notification.TYPE_GAME_UPDATED: "notify_activity_updates",
 }
@@ -72,6 +74,10 @@ def get_notification_message(notification):
         game = getattr(target, "game", target)
         sport = _game_sport_label(game)
         return f"{actor} отклонил вашу заявку на участие в мероприятии {sport}"
+
+    if notification_type == Notification.TYPE_GAME_PLAYER_REMOVED:
+        sport = _game_sport_label(target)
+        return f"{actor} исключил вас из мероприятия {sport}"
 
     if notification_type == Notification.TYPE_CHAT_MESSAGE:
         game = getattr(target, "game", target)

@@ -11,6 +11,7 @@ class Notification(models.Model):
     TYPE_GAME_INVITATION = "game_invitation"
     TYPE_GAME_PARTICIPATION_ACCEPTED = "game_participation_accepted"
     TYPE_GAME_PARTICIPATION_REJECTED = "game_participation_rejected"
+    TYPE_GAME_PLAYER_REMOVED = "game_player_removed"
     TYPE_CHAT_MESSAGE = "chat_message"
     TYPE_GAME_UPDATED = "game_updated"
 
@@ -21,6 +22,7 @@ class Notification(models.Model):
         (TYPE_GAME_INVITATION, "Приглашение на игру"),
         (TYPE_GAME_PARTICIPATION_ACCEPTED, "Заявка на участие принята"),
         (TYPE_GAME_PARTICIPATION_REJECTED, "Заявка на участие отклонена"),
+        (TYPE_GAME_PLAYER_REMOVED, "Исключение из мероприятия"),
         (TYPE_CHAT_MESSAGE, "Сообщение в чате игры"),
         (TYPE_GAME_UPDATED, "Изменение условий игры"),
     )
