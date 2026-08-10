@@ -340,6 +340,13 @@ body.page-profile-edit .profile-edit select {
     margin: 0 0 4px;
 }
 
+.profile-edit__hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
 @media (max-width: 768px) {
     body.page-profile-edit #content {
         padding: 0;

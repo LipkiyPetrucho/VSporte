@@ -14,6 +14,11 @@ class Notification(models.Model):
     TYPE_GAME_PLAYER_REMOVED = "game_player_removed"
     TYPE_CHAT_MESSAGE = "chat_message"
     TYPE_GAME_UPDATED = "game_updated"
+    TYPE_GROUP_JOIN_REQUEST = "group_join_request"
+    TYPE_GROUP_INVITATION = "group_invitation"
+    TYPE_GROUP_JOIN_ACCEPTED = "group_join_accepted"
+    TYPE_GROUP_JOIN_REJECTED = "group_join_rejected"
+    TYPE_GROUP_MEMBER_REMOVED = "group_member_removed"
 
     TYPE_CHOICES = (
         (TYPE_FRIENDSHIP_REQUEST, "Заявка в друзья"),
@@ -25,6 +30,11 @@ class Notification(models.Model):
         (TYPE_GAME_PLAYER_REMOVED, "Исключение из мероприятия"),
         (TYPE_CHAT_MESSAGE, "Сообщение в чате игры"),
         (TYPE_GAME_UPDATED, "Изменение условий игры"),
+        (TYPE_GROUP_JOIN_REQUEST, "Заявка на вступление в группу"),
+        (TYPE_GROUP_INVITATION, "Приглашение в группу"),
+        (TYPE_GROUP_JOIN_ACCEPTED, "Заявка на вступление принята"),
+        (TYPE_GROUP_JOIN_REJECTED, "Заявка на вступление отклонена"),
+        (TYPE_GROUP_MEMBER_REMOVED, "Исключение из группы"),
     )
 
     recipient = models.ForeignKey(

@@ -141,6 +141,17 @@
     </div>
 
     <div class="profile-page__info-row">
+      <span class="profile-page__info-label">Телефон</span>
+      <span class="profile-page__info-value">
+        {% if is_own_profile or user.profile.show_phone %}
+          {{ user.profile.phone|default:"—" }}
+        {% else %}
+          —
+        {% endif %}
+      </span>
+    </div>
+
+    <div class="profile-page__info-row">
       <span class="profile-page__info-label">Пол</span>
       <span class="profile-page__info-value">
         {% if is_own_profile or user.profile.show_gender %}

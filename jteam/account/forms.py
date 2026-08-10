@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 
 from .interests import INTEREST_CHOICES
 from .models import Profile
+from .phone_service import PhoneValidationError, normalize_phone
 
 
 class PreferencesPasswordChangeForm(PasswordChangeForm):
@@ -40,25 +41,155 @@ class LoginForm(forms.Form):
     password = forms.CharField(widget=forms.PasswordInput)
 
 
-class UserRegistrationForm(forms.ModelForm):
-    password = forms.CharField(label="Password", widget=forms.PasswordInput)
-    password2 = forms.CharField(label="Repeat password", widget=forms.PasswordInput)
+class EmailLoginForm(forms.Form):
+    """Вход по email или логину."""
 
-    class Meta:
-        model = User
-        fields = ["username", "first_name", "email"]
+    login = forms.CharField(
+        label="Email или логин",
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "Email или логин",
+                "autocomplete": "username",
+            }
+        ),
+    )
+    password = forms.CharField(
+        label="Пароль",
+        widget=forms.PasswordInput(
+            attrs={
+                "placeholder": "Пароль",
+                "autocomplete": "current-password",
+            }
+        ),
+    )
 
-    def clean_password2(self):
-        cd = self.cleaned_data
-        if cd["password"] != cd["password2"]:
-            raise forms.ValidationError("Password don't match.")
-        return cd["password2"]
+    def clean_login(self):
+        value = (self.cleaned_data.get("login") or "").strip()
+        if not value:
+            raise forms.ValidationError("Укажите email или логин.")
+        return value
+
+
+class UserRegistrationForm(forms.Form):
+    username = forms.CharField(
+        label="Логин",
+        max_length=150,
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "Логин *",
+                "autocomplete": "username",
+            }
+        ),
+    )
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(
+            attrs={
+                "placeholder": "Email *",
+                "autocomplete": "email",
+            }
+        ),
+    )
+    password = forms.CharField(
+        label="Пароль",
+        widget=forms.PasswordInput(
+            attrs={
+                "placeholder": "Пароль *",
+                "autocomplete": "new-password",
+            }
+        ),
+    )
+    password2 = forms.CharField(
+        label="Подтверждение пароля",
+        widget=forms.PasswordInput(
+            attrs={
+                "placeholder": "Подтверждение пароля *",
+                "autocomplete": "new-password",
+            }
+        ),
+    )
+    first_name = forms.CharField(
+        label="Имя",
+        required=False,
+        max_length=150,
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "Имя (необязательно)",
+                "autocomplete": "given-name",
+            }
+        ),
+    )
+    phone = forms.CharField(
+        label="Телефон",
+        required=False,
+        max_length=20,
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "Телефон (необязательно)",
+                "autocomplete": "tel",
+                "inputmode": "tel",
+            }
+        ),
+    )
+
+    def clean_username(self):
+        username = (self.cleaned_data.get("username") or "").strip()
+        if not username:
+            raise forms.ValidationError("Укажите логин.")
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError("Этот логин уже занят.")
+        return username
 
     def clean_email(self):
-        data = self.cleaned_data["email"]
-        if User.objects.filter(email=data).exists():
+        email = (self.cleaned_data.get("email") or "").strip()
+        if not email:
+            raise forms.ValidationError("Укажите email.")
+        if User.objects.filter(email=email).exists():
             raise forms.ValidationError("Email already in use.")
-        return data
+        return email
+
+    def clean_phone(self):
+        raw = (self.cleaned_data.get("phone") or "").strip()
+        if not raw:
+            return None
+        try:
+            phone = normalize_phone(raw)
+        except PhoneValidationError as exc:
+            raise forms.ValidationError(str(exc)) from exc
+        if Profile.objects.filter(phone=phone).exists():
+            raise forms.ValidationError("Этот номер телефона уже используется.")
+        return phone
+
+    def clean(self):
+        cleaned = super().clean()
+        password = cleaned.get("password") or ""
+        password2 = cleaned.get("password2") or ""
+        if password != password2:
+            self.add_error("password2", "Пароли не совпадают.")
+        return cleaned
+
+
+class PhoneVerificationForm(forms.Form):
+    code = forms.CharField(
+        label="Код подтверждения",
+        max_length=4,
+        min_length=4,
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "Код из SMS",
+                "autocomplete": "one-time-code",
+                "inputmode": "numeric",
+                "pattern": "[0-9]{4}",
+                "maxlength": "4",
+            }
+        ),
+    )
+
+    def clean_code(self):
+        code = self.cleaned_data["code"].strip()
+        if not code.isdigit() or len(code) != 4:
+            raise forms.ValidationError("Введите четырёхзначный код.")
+        return code
 
 
 class UserEditForm(forms.ModelForm):
@@ -78,7 +209,9 @@ class UserEditForm(forms.ModelForm):
         }
 
     def clean_email(self):
-        data = self.cleaned_data["email"]
+        data = (self.cleaned_data.get("email") or "").strip()
+        if not data:
+            raise forms.ValidationError("Укажите email.")
         qs = User.objects.exclude(id=self.instance.id).filter(email=data)
         if qs.exists():
             raise forms.ValidationError("Email already in use.")
@@ -100,10 +233,23 @@ class ProfileEditForm(forms.ModelForm):
         widget=forms.CheckboxSelectMultiple,
         label="",
     )
+    phone = forms.CharField(
+        label="Телефон",
+        required=False,
+        max_length=20,
+        widget=forms.TextInput(
+            attrs={
+                "class": "profile-edit__input",
+                "autocomplete": "tel",
+                "inputmode": "tel",
+                "placeholder": "+7XXXXXXXXXX",
+            }
+        ),
+    )
 
     class Meta:
         model = Profile
-        fields = ["photo", "gender", "bio", "show_email"]
+        fields = ["photo", "gender", "bio", "show_email", "show_phone"]
         widgets = {
             "photo": forms.FileInput(
                 attrs={
@@ -125,16 +271,35 @@ class ProfileEditForm(forms.ModelForm):
             "show_email": forms.CheckboxInput(
                 attrs={"class": "profile-edit__toggle-input"}
             ),
+            "show_phone": forms.CheckboxInput(
+                attrs={"class": "profile-edit__toggle-input"}
+            ),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Model choices already include the blank "Не указан" option.
         self.fields["gender"].choices = list(Profile.GENDER_CHOICES)
         if self.instance.pk:
             self.fields["interests"].initial = self.instance.interests or []
+            self.fields["phone"].initial = self.instance.phone or ""
+
+    def clean_phone(self):
+        raw = self.cleaned_data.get("phone", "").strip()
+        if not raw:
+            return None
+        try:
+            phone = normalize_phone(raw)
+        except PhoneValidationError as exc:
+            raise forms.ValidationError(str(exc)) from exc
+        qs = Profile.objects.filter(phone=phone)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError("Этот номер телефона уже используется.")
+        return phone
 
     def save(self, commit=True):
+        """Сохраняет профиль без изменения телефона (телефон — только после OTP)."""
         profile = super().save(commit=False)
         profile.interests = self.cleaned_data.get("interests", [])
         if commit:
@@ -142,7 +307,6 @@ class ProfileEditForm(forms.ModelForm):
         return profile
 
 
-# возможность вводить поисковые запросы
 class SearchForm(forms.Form):
     query = forms.CharField(
         label="",

@@ -104,6 +104,26 @@
           <span class="profile-edit__toggle-slider"></span>
         </label>
       </div>
+
+      <div class="profile-edit__field">
+        <label class="profile-edit__label" for="{{ profile_form.phone.id_for_label }}">Телефон</label>
+        {{ profile_form.phone }}
+        {% if request.user.profile.phone_verified %}
+          <span class="profile-edit__hint">Номер подтверждён. При смене потребуется код из SMS.</span>
+        {% elif request.user.profile.phone %}
+          <span class="profile-edit__hint">Номер не подтверждён</span>
+        {% else %}
+          <span class="profile-edit__hint">После сохранения на новый номер придёт код подтверждения</span>
+        {% endif %}
+      </div>
+
+      <div class="profile-edit__field profile-edit__field--toggle">
+        <p class="profile-edit__toggle-label">Показывать телефон другим пользователям</p>
+        <label class="profile-edit__toggle">
+          {{ profile_form.show_phone }}
+          <span class="profile-edit__toggle-slider"></span>
+        </label>
+      </div>
     </div>
 
     <h2 class="profile-edit__section-title">Личная информация</h2>

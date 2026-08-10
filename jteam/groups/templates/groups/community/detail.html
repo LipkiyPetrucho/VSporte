@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+{% load static thumbnail game_extras %}
+
+{% block title %}{{ community.name }}{% endblock %}
+{% block body_class %} class="page-group-detail"{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/group-detail.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="group-view"
+     data-community-id="{{ community.id }}"
+     data-join-url="{% url 'groups:join' %}"
+     data-leave-url="{% url 'groups:leave' %}"
+     data-membership-url="{% url 'groups:membership' %}"
+     data-invite-url="{% url 'groups:invite' %}"
+     data-owner-username="{{ community.owner.username }}"
+     data-current-username="{% if request.user.is_authenticated %}{{ request.user.username }}{% endif %}"
+     data-is-owner="{% if is_owner %}1{% else %}0{% endif %}"
+     data-membership-status="{{ membership_status }}">
+  <header class="group-view-header{% if community.image %} group-view-header--has-cover{% endif %}">
+    {% if community.image %}
+      <img src="{{ community.image.url }}" alt="" class="group-view-header-cover">
+      <div class="group-view-header-overlay" aria-hidden="true"></div>
+    {% endif %}
+    <div class="group-view-header-content">
+      <div class="group-view-topbar">
+        <a href="{% url 'groups:list' %}" class="group-view-back" aria-label="Назад">
+          <i class="fas fa-chevron-left"></i>
+        </a>
+        <div class="group-view-topbar-actions">
+          <div class="group-view-menu">
+            <button type="button" class="group-view-menu-btn" id="group-view-menu-btn" aria-label="Меню">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <div class="group-view-menu-dropdown" id="group-view-menu-dropdown">
+              {% if is_owner %}
+                <a href="{% url 'groups:edit' community.id community.slug %}">Редактировать</a>
+                <form action="{% url 'groups:delete' community.id %}" method="post">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="danger"
+                          onclick="return confirm('Вы уверены, что хотите удалить эту группу?')">
+                    Удалить группу
+                  </button>
+                </form>
+              {% endif %}
+              <a href="{{ community.owner.get_absolute_url }}">Профиль владельца</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h1 class="group-view-title">{{ community.name }}</h1>
+      <p class="group-view-sport">
+        <i class="fas {{ community.sport|sport_icon }}" aria-hidden="true"></i>
+        {{ community.get_sport_display }}
+      </p>
+    </div>
+  </header>
+
+  <div class="group-view-layout">
+    <div class="group-view-stack">
+      <section class="group-view-card" id="group-details-card">
+        <h2 class="group-view-card-title">О группе</h2>
+        <dl class="group-view-details-list">
+          <div class="group-view-details-row">
+            <dt>Спорт</dt>
+            <dd>{{ community.get_sport_display }}</dd>
+          </div>
+          <div class="group-view-details-row">
+            <dt>Владелец</dt>
+            <dd>
+              <a href="{{ community.owner.get_absolute_url }}">{{ community.owner.username }}</a>
+            </dd>
+          </div>
+          <div class="group-view-details-row">
+            <dt>Участников</dt>
+            <dd><span id="members-count">{{ members_count }}</span></dd>
+          </div>
+        </dl>
+        {% if community.description %}
+          <div class="group-view-details-note">
+            <p>{{ community.description|linebreaksbr }}</p>
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="group-view-card">
+        <div class="group-view-members-head">
+          <h2 class="group-view-card-title">
+            Участники · <span id="members-count-title">{{ members_count }}</span>
+          </h2>
+        </div>
+
+        <div id="members-preview">
+          {% if community.members.exists %}
+            {% for member in community.members.all %}
+              <div class="group-view-member{% if member == community.owner %} group-view-member--owner{% endif %}">
+                {% if member.profile.photo %}
+                  {% thumbnail member.profile.photo "42x42" crop="100%" as avatar %}
+                  <img src="{{ avatar.url }}" alt="" class="group-view-member-avatar">
+                {% else %}
+                  <span class="group-view-member-avatar placeholder">{{ member.username.0|upper }}</span>
+                {% endif %}
+                <div class="group-view-member-meta">
+                  {% if member == request.user %}
+                    <span class="group-view-member-name">Вы</span>
+                  {% else %}
+                    <a href="{{ member.get_absolute_url }}" class="group-view-member-name">{{ member.username }}</a>
+                  {% endif %}
+                  {% if member == community.owner %}
+                    <span class="group-view-badge">Владелец</span>
+                  {% endif %}
+                </div>
+                {% if is_owner and member != community.owner %}
+                  <button type="button"
+                          class="group-view-member-remove"
+                          data-action="remove_member"
+                          data-user-id="{{ member.pk }}"
+                          data-username="{{ member.username }}"
+                          title="Удалить участника"
+                          aria-label="Удалить {{ member.username }}">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                  </button>
+                {% endif %}
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="group-view-empty">Пока нет участников.</p>
+          {% endif %}
+        </div>
+
+        <div class="group-view-actions">
+          {% if request.user.is_authenticated %}
+            {% if is_member %}
+              {% if not is_owner %}
+                <button type="button"
+                        class="group-view-action danger"
+                        id="join-btn"
+                        data-id="{{ community.id }}"
+                        data-action="leave">
+                  <span class="group-view-action-icon"><i class="fas fa-times"></i></span>
+                  Выйти
+                </button>
+              {% else %}
+                <button type="button" class="group-view-action" disabled>
+                  <span class="group-view-action-icon"><i class="fas fa-crown"></i></span>
+                  Владелец
+                </button>
+              {% endif %}
+            {% elif has_pending_invitation %}
+              <button type="button"
+                      class="group-view-action group-view-action--invite"
+                      id="join-btn"
+                      data-id="{{ pending_invitation.id }}"
+                      data-action="accept_invitation">
+                <span class="group-view-action-icon"><i class="fas fa-envelope-open"></i></span>
+                Принять приглашение
+              </button>
+              <button type="button"
+                      class="group-view-action danger"
+                      id="decline-invite-btn"
+                      data-id="{{ pending_invitation.id }}"
+                      data-action="decline_invitation">
+                <span class="group-view-action-icon"><i class="fas fa-times"></i></span>
+                Отклонить
+              </button>
+            {% elif has_pending_request and pending_join_request %}
+              <button type="button"
+                      class="group-view-action group-view-action--pending"
+                      id="join-btn"
+                      data-id="{{ pending_join_request.id }}"
+                      data-action="cancel_request"
+                      title="Нажмите, чтобы отменить заявку">
+                <span class="group-view-action-icon"><i class="fas fa-clock"></i></span>
+                Заявка отправлена
+              </button>
+            {% else %}
+              <button type="button"
+                      class="group-view-action"
+                      id="join-btn"
+                      data-id="{{ community.id }}"
+                      data-action="join">
+                <span class="group-view-action-icon"><i class="fas fa-plus"></i></span>
+                Вступить
+              </button>
+            {% endif %}
+          {% endif %}
+
+          {% if is_owner %}
+            <button type="button" class="group-view-action" id="group-action-invite">
+              <span class="group-view-action-icon"><i class="fas fa-user-plus"></i></span>
+              Пригласить
+            </button>
+          {% endif %}
+        </div>
+
+        {% if is_owner and pending_invitations %}
+          <div class="group-view-requests group-view-invitations" id="pending-invitations-block">
+            <h3 class="group-view-card-title">Отправленные приглашения</h3>
+            <ul class="group-view-requests-list" id="pending-invitations-list">
+              {% for invitation in pending_invitations %}
+                <li class="group-view-request">
+                  <div class="group-view-request-user">
+                    {% if invitation.to_user.profile.photo %}
+                      {% thumbnail invitation.to_user.profile.photo "42x42" crop="100%" as avatar %}
+                      <img src="{{ avatar.url }}" alt="" class="group-view-member-avatar">
+                    {% else %}
+                      <span class="group-view-member-avatar placeholder">{{ invitation.to_user.username.0|upper }}</span>
+                    {% endif %}
+                    <a href="{{ invitation.to_user.get_absolute_url }}" class="group-view-member-name">
+                      {{ invitation.to_user.username }}
+                    </a>
+                  </div>
+                  <div class="group-view-request-actions">
+                    <button type="button"
+                            class="group-view-request-btn reject"
+                            data-invitation-id="{{ invitation.id }}"
+                            data-action="cancel">
+                      Отменить
+                    </button>
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        {% if is_owner and pending_join_requests %}
+          <div class="group-view-requests" id="join-requests-block">
+            <h3 class="group-view-card-title">Заявки на вступление</h3>
+            <ul class="group-view-requests-list" id="join-requests-list">
+              {% for join_request in pending_join_requests %}
+                <li class="group-view-request">
+                  <div class="group-view-request-user">
+                    {% if join_request.user.profile.photo %}
+                      {% thumbnail join_request.user.profile.photo "42x42" crop="100%" as avatar %}
+                      <img src="{{ avatar.url }}" alt="" class="group-view-member-avatar">
+                    {% else %}
+                      <span class="group-view-member-avatar placeholder">{{ join_request.user.username.0|upper }}</span>
+                    {% endif %}
+                    <a href="{{ join_request.user.get_absolute_url }}" class="group-view-member-name">
+                      {{ join_request.user.username }}
+                    </a>
+                  </div>
+                  <div class="group-view-request-actions">
+                    <button type="button"
+                            class="group-view-request-btn accept"
+                            data-join-request-id="{{ join_request.id }}"
+                            data-action="accept">
+                      Принять
+                    </button>
+                    <button type="button"
+                            class="group-view-request-btn reject"
+                            data-join-request-id="{{ join_request.id }}"
+                            data-action="reject">
+                      Отклонить
+                    </button>
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+
+  {% if is_owner %}
+    <div class="group-view-invite-modal" id="group-invite-modal" hidden>
+      <div class="group-view-invite-backdrop" id="group-invite-backdrop"></div>
+      <div class="group-view-invite-dialog" role="dialog" aria-labelledby="group-invite-title">
+        <div class="group-view-invite-header">
+          <h2 class="group-view-invite-title" id="group-invite-title">Пригласить друга</h2>
+          <button type="button" class="group-view-invite-close" id="group-invite-close" aria-label="Закрыть">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        {% if invite_friends %}
+          <ul class="group-view-invite-list" id="group-invite-list">
+            {% for friend in invite_friends %}
+              <li class="group-view-invite-item">
+                <div class="group-view-request-user">
+                  {% if friend.profile.photo %}
+                    {% thumbnail friend.profile.photo "42x42" crop="100%" as avatar %}
+                    <img src="{{ avatar.url }}" alt="" class="group-view-member-avatar">
+                  {% else %}
+                    <span class="group-view-member-avatar placeholder">{{ friend.username.0|upper }}</span>
+                  {% endif %}
+                  <span class="group-view-member-name">{{ friend.username }}</span>
+                </div>
+                <button type="button"
+                        class="group-view-request-btn accept"
+                        data-user-id="{{ friend.id }}"
+                        data-action="invite">
+                  Пригласить
+                </button>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="group-view-empty" id="group-invite-empty">Нет друзей для приглашения</p>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/group-detail.js' %}"></script>
+{% endblock %}

@@ -27,7 +27,16 @@ class Profile(models.Model):
         max_length=10, choices=GENDER_CHOICES, blank=True, default=""
     )
     bio = models.TextField(blank=True)
+    phone = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        unique=True,
+        verbose_name="Телефон",
+    )
+    phone_verified = models.BooleanField(default=False)
     show_email = models.BooleanField(default=True)
+    show_phone = models.BooleanField(default=False)
     show_location = models.BooleanField(default=True)
     show_gender = models.BooleanField(default=True)
     interests = models.JSONField(default=list, blank=True)
@@ -57,6 +66,42 @@ class Profile(models.Model):
 
     def get_absolute_url(self):
         return reverse("user_detail", args=[str(self.id)])
+
+
+class PhoneVerification(models.Model):
+    PURPOSE_REGISTER = "register"
+    PURPOSE_CHANGE = "change"
+    PURPOSE_LOGIN = "login"
+    PURPOSE_CHOICES = (
+        (PURPOSE_REGISTER, "Регистрация"),
+        (PURPOSE_CHANGE, "Смена телефона"),
+        (PURPOSE_LOGIN, "Вход"),
+    )
+
+    phone = models.CharField(max_length=20, db_index=True)
+    code = models.CharField(max_length=4)
+    purpose = models.CharField(
+        max_length=20, choices=PURPOSE_CHOICES, default=PURPOSE_REGISTER
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["phone", "-created_at"]),
+        ]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.phone} ({self.purpose})"
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+
+        return timezone.now() >= self.expires_at
 
 
 class Friendship(models.Model):

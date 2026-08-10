@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     # app
     "account.apps.AccountConfig",
     "games.apps.GamesConfig",
+    "groups.apps.GroupsConfig",
     "actions.apps.ActionsConfig",
     "notifications.apps.NotificationsConfig",
     "location.apps.LocationConfig",
@@ -71,6 +72,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "social_django.context_processors.backends",
+                "account.context_processors.social_login",
                 "cart.context_processors.cart",
                 "notifications.context_processors.notifications",
                 "location.context_processors.cities",
@@ -189,19 +191,16 @@ CELERY_TASK_SERIALIZER = "json"
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "account.authentication.EmailAuthBackend",
-    "social_core.backends.facebook.FacebookOAuth2",
     "social_core.backends.google.GoogleOAuth2",
+    "social_core.backends.telegram.TelegramAuth",
 ]
 
-SOCIAL_AUTH_FACEBOOK_KEY = os.getenv("SOCIAL_AUTH_FACEBOOK_KEY")
-SOCIAL_AUTH_FACEBOOK_SECRET = os.getenv("SOCIAL_AUTH_FACEBOOK_SECRET")
-SOCIAL_AUTH_FACEBOOK_SCOPE = [
-    "email",
-]
-
-# ИД клиента Google
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY")
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET")
+
+# Telegram Login Widget: токен бота от @BotFather + username без @
+SOCIAL_AUTH_TELEGRAM_BOT_TOKEN = os.getenv("SOCIAL_AUTH_TELEGRAM_BOT_TOKEN")
+TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "")
 
 SOCIAL_AUTH_PIPELINE = [
     "social_core.pipeline.social_auth.social_details",
@@ -233,6 +232,15 @@ INTERNAL_IPS = ["127.0.0.1", "localhost", ".jteam.ru"]
 
 # ключ, который будет использоваться для хранения корзины в пользовательском сеансе.
 CART_SESSION_ID = "cart"
+
+# SMS: console (лог) или twilio
+SMS_BACKEND = os.getenv("SMS_BACKEND", "console")
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER")
+PHONE_CODE_TTL_MINUTES = int(os.getenv("PHONE_CODE_TTL_MINUTES", "10"))
+PHONE_CODE_MAX_ATTEMPTS = int(os.getenv("PHONE_CODE_MAX_ATTEMPTS", "5"))
+PHONE_CODE_RESEND_COOLDOWN = int(os.getenv("PHONE_CODE_RESEND_COOLDOWN", "60"))
 
 # Маркетплейс площадок: корзина, заказы, оплата. Выключено до появления партнёров.
 MARKETPLACE_ENABLED = os.getenv("MARKETPLACE_ENABLED", "false").lower() in (

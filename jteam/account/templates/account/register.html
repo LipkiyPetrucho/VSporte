@@ -12,11 +12,6 @@
         border-radius: 15px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
-    
-    .register-container form {
-        overflow: visible !important;
-    }
-    
     .register-title {
         text-align: center;
         font-size: 28px;
@@ -24,17 +19,16 @@
         color: #333;
         margin-bottom: 30px;
     }
-    
     .register-subtitle {
         text-align: center;
         color: #666;
         margin-bottom: 30px;
         font-size: 16px;
     }
-    
     .register-container input[type="text"],
     .register-container input[type="email"],
-    .register-container input[type="password"] {
+    .register-container input[type="password"],
+    .register-container input[type="tel"] {
         width: 100% !important;
         padding: 15px 20px !important;
         border: 2px solid #4CAF50 !important;
@@ -42,21 +36,9 @@
         font-size: 16px !important;
         margin-bottom: 15px !important;
         outline: none !important;
-        transition: all 0.3s ease !important;
         background: white !important;
-        float: none !important;
-        clear: none !important;
         box-sizing: border-box !important;
     }
-    
-    .register-container input[type="text"]:focus,
-    .register-container input[type="email"]:focus,
-    .register-container input[type="password"]:focus {
-        border-color: #45a049 !important;
-        box-shadow: 0 0 10px rgba(76, 175, 80, 0.3) !important;
-        background: white !important;
-    }
-    
     .register-container input[type="submit"] {
         width: 100% !important;
         padding: 15px !important;
@@ -68,28 +50,10 @@
         font-weight: bold !important;
         cursor: pointer !important;
         margin-top: 10px !important;
-        transition: background 0.3s ease !important;
-        float: none !important;
-        clear: none !important;
-        text-transform: none !important;
         box-sizing: border-box !important;
     }
-    
-    .register-container input[type="submit"]:hover {
-        background: #45a049 !important;
-    }
-    
-    .register-container label {
-        display: none !important;
-    }
-    
-    .register-container p {
-        margin-bottom: 0 !important;
-        overflow: visible !important;
-        float: none !important;
-    }
-    
-    .error-message {
+    .register-container label { display: none !important; }
+    .error-message, .field-errors {
         background-color: #f8d7da;
         color: #721c24;
         border: 1px solid #f5c6cb;
@@ -98,7 +62,6 @@
         border-radius: 5px;
         text-align: center;
     }
-    
     .success-message {
         background-color: #d4edda;
         color: #155724;
@@ -108,72 +71,25 @@
         border-radius: 5px;
         text-align: center;
     }
-    
-    .field-errors {
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-        padding: 5px 10px;
-        margin-bottom: 10px;
-        border-radius: 5px;
-        font-size: 14px;
-    }
-    
-    .field-errors ul {
-        margin: 0;
-        padding-left: 15px;
-    }
-    
     .login-link {
         text-align: center;
         margin-top: 20px;
         padding-top: 20px;
         border-top: 1px solid #eee;
     }
-    
-    .login-link a {
-        color: #4CAF50;
-        text-decoration: none;
-        font-weight: bold;
-    }
-    
-    .login-link a:hover {
-        text-decoration: underline;
-    }
-    
+    .login-link a { color: #4CAF50; text-decoration: none; font-weight: bold; }
     .required-fields {
         text-align: center;
         color: #666;
         font-size: 14px;
         margin-bottom: 20px;
     }
-    
-    /* Мобильная адаптивность */
-    @media (max-width: 480px) {
-        .register-container {
-            margin: 20px auto;
-            padding: 30px 20px;
-            max-width: 90%;
-        }
-        
-        .register-title {
-            font-size: 24px;
-        }
-        
-        .register-container input[type="text"],
-        .register-container input[type="email"],
-        .register-container input[type="password"],
-        .register-container input[type="submit"] {
-            padding: 12px 15px !important;
-            font-size: 14px !important;
-        }
-    }
 </style>
 
 <div class="register-container">
     <h1 class="register-title">Создать аккаунт</h1>
-    <p class="register-subtitle">Пожалуйста, заполните форму для создания аккаунта</p>
-    
+    <p class="register-subtitle">Зарегистрируйтесь с помощью email</p>
+
     {% if messages %}
         {% for message in messages %}
             <div class="{% if message.tags == 'error' %}error-message{% else %}success-message{% endif %}">
@@ -181,76 +97,65 @@
             </div>
         {% endfor %}
     {% endif %}
-    
+
     <div class="required-fields">
-        <small>* Все поля обязательны для заполнения</small>
+        <small>* Логин, email и пароль обязательны</small>
     </div>
-    
+
     <form method="post">
         {% csrf_token %}
-        
-        <!-- Логин -->
+
         <p>
-            <input type="text" name="username" placeholder="Логин *" required id="id_username" maxlength="150">
-            {% if user_form.username.errors %}
-                <div class="field-errors">
-                    {{ user_form.username.errors }}
-                </div>
-            {% endif %}
+            <input type="text" name="username" placeholder="Логин *" required id="id_username" maxlength="150"
+                   value="{{ user_form.username.value|default_if_none:'' }}">
+            {% if user_form.username.errors %}<div class="field-errors">{{ user_form.username.errors }}</div>{% endif %}
         </p>
-        
-        <!-- Имя -->
+
         <p>
-            <input type="text" name="first_name" placeholder="Имя *" required id="id_first_name" maxlength="150">
-            {% if user_form.first_name.errors %}
-                <div class="field-errors">
-                    {{ user_form.first_name.errors }}
-                </div>
-            {% endif %}
+            <input type="email" name="email" placeholder="Email *" required id="id_email"
+                   value="{{ user_form.email.value|default_if_none:'' }}">
+            {% if user_form.email.errors %}<div class="field-errors">{{ user_form.email.errors }}</div>{% endif %}
         </p>
-        
-        <!-- Email -->
-        <p>
-            <input type="email" name="email" placeholder="Email *" required id="id_email">
-            {% if user_form.email.errors %}
-                <div class="field-errors">
-                    {{ user_form.email.errors }}
-                </div>
-            {% endif %}
-        </p>
-        
-        <!-- Пароль -->
+
         <p>
             <input type="password" name="password" placeholder="Пароль *" required id="id_password">
-            {% if user_form.password.errors %}
-                <div class="field-errors">
-                    {{ user_form.password.errors }}
-                </div>
-            {% endif %}
+            {% if user_form.password.errors %}<div class="field-errors">{{ user_form.password.errors }}</div>{% endif %}
         </p>
-        
-        <!-- Подтверждение пароля -->
+
         <p>
             <input type="password" name="password2" placeholder="Подтверждение пароля *" required id="id_password2">
-            {% if user_form.password2.errors %}
-                <div class="field-errors">
-                    {{ user_form.password2.errors }}
-                </div>
-            {% endif %}
+            {% if user_form.password2.errors %}<div class="field-errors">{{ user_form.password2.errors }}</div>{% endif %}
         </p>
-        
-        <!-- Общие ошибки формы -->
+
+        <p>
+            <input type="text" name="first_name" placeholder="Имя (необязательно)" id="id_first_name" maxlength="150"
+                   value="{{ user_form.first_name.value|default_if_none:'' }}">
+            {% if user_form.first_name.errors %}<div class="field-errors">{{ user_form.first_name.errors }}</div>{% endif %}
+        </p>
+
+        <p>
+            <input type="tel" name="phone" placeholder="Телефон (необязательно)" id="id_phone"
+                   autocomplete="tel" inputmode="tel"
+                   value="{{ user_form.phone.value|default_if_none:'' }}">
+            {% if user_form.phone.errors %}<div class="field-errors">{{ user_form.phone.errors }}</div>{% endif %}
+        </p>
+
         {% if user_form.non_field_errors %}
-            <div class="error-message">
-                {{ user_form.non_field_errors }}
-            </div>
+            <div class="error-message">{{ user_form.non_field_errors }}</div>
         {% endif %}
-        
+
         <p><input type="submit" value="Создать аккаунт"></p>
     </form>
-    
+
     <div class="login-link">
         <p>Уже есть аккаунт? <a href="{% url 'login' %}">Войти здесь</a></p>
     </div>
+
+    {% if telegram_login_enabled %}
+    <div style="text-align:center;margin:24px 0 8px;position:relative;">
+      <span style="background:#fff;padding:0 12px;color:#666;position:relative;z-index:1;">или через Telegram</span>
+    </div>
+    {% include "account/include/telegram_login_widget.html" %}
+    {% endif %}
 </div>
 {% endblock %}

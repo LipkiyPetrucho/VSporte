@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if is_edit %}Редактировать группу{% else %}Создать группу{% endif %}{% endblock %}
+{% block body_class %} class="page-create-group"{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/group-list.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="group-create"
+     data-group-create
+     {% if form.errors %}data-has-errors="1"{% endif %}>
+  <div class="group-create__shell">
+    <header class="group-create__header">
+      <a href="{% if cancel_url %}{{ cancel_url }}{% else %}{% url 'groups:list' %}{% endif %}"
+         class="group-create__back"
+         aria-label="Назад">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+      <h1 class="group-create__title">
+        {% if page_title %}{{ page_title }}{% else %}Создать группу{% endif %}
+      </h1>
+      <a href="{% if cancel_url %}{{ cancel_url }}{% else %}{% url 'groups:list' %}{% endif %}"
+         class="group-create__cancel">Отмена</a>
+    </header>
+
+    {% if form.errors %}
+      <div class="group-create__form-alert" role="alert">
+        {% if form_error_message %}
+          {{ form_error_message }}
+        {% else %}
+          Не удалось сохранить группу. Проверьте поля с ошибками.
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="group-create__body">
+      <form method="post"
+            enctype="multipart/form-data"
+            class="group-create__form"
+            id="create-group-form"
+            novalidate>
+        {% csrf_token %}
+
+        <p class="group-create__hint">Укажите название, вид спорта и описание</p>
+
+        <div class="group-create__fields">
+          <div class="group-create__field-block">
+            <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+            {{ form.name }}
+            {% if form.name.errors %}
+              <p class="group-create__field-error">{{ form.name.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div class="group-create__row group-create__row--picker"
+               role="button"
+               tabindex="0"
+               data-sport-trigger
+               aria-haspopup="dialog"
+               aria-controls="group-create-sport-sheet">
+            <div class="group-create__row-main">
+              <i class="fas fa-futbol group-create__row-icon" aria-hidden="true"></i>
+              <span class="group-create__row-label">Вид спорта</span>
+            </div>
+            <span class="group-create__row-value" data-sport-label>
+              {% if form.sport.value %}
+                {% for value, label in form.fields.sport.choices %}
+                  {% if value == form.sport.value %}{{ label }}{% endif %}
+                {% endfor %}
+              {% else %}
+                Выберите
+              {% endif %}
+            </span>
+            <i class="fas fa-chevron-right group-create__row-chevron" aria-hidden="true"></i>
+            <div class="group-create__hidden-field">{{ form.sport }}</div>
+          </div>
+          {% if form.sport.errors %}
+            <p class="group-create__field-error group-create__field-error--pad">{{ form.sport.errors.0 }}</p>
+          {% endif %}
+
+          <div class="group-create__field-block">
+            <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+            {{ form.description }}
+            {% if form.description.errors %}
+              <p class="group-create__field-error">{{ form.description.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div class="group-create__field-block">
+            <label for="{{ form.image.id_for_label }}">{{ form.image.label }}</label>
+            <input type="file"
+                   name="{{ form.image.html_name }}"
+                   id="{{ form.image.id_for_label }}"
+                   class="group-create__file-input"
+                   accept="image/*">
+            {% if is_edit and community.image %}
+              <p class="group-create__field-help">Текущее фото будет заменено при загрузке нового.</p>
+            {% endif %}
+            {% if form.image.errors %}
+              <p class="group-create__field-error">{{ form.image.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <footer class="group-create__footer">
+          <button type="submit" class="group-create__btn group-create__btn--primary">
+            {% if submit_label %}{{ submit_label }}{% else %}Создать{% endif %}
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <div class="group-create__sheet" id="group-create-sport-sheet" hidden>
+    <div class="group-create__sheet-backdrop" data-sheet-close></div>
+    <div class="group-create__sheet-panel" role="dialog" aria-modal="true" aria-labelledby="group-sport-sheet-title">
+      <div class="group-create__sheet-header">
+        <h2 id="group-sport-sheet-title">Вид спорта</h2>
+        <button type="button" class="group-create__sheet-close" data-sheet-close aria-label="Закрыть">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <ul class="group-create__sport-list">
+        {% for value, label in form.fields.sport.choices %}
+          {% if value %}
+            <li>
+              <button type="button"
+                      class="group-create__sport-item{% if form.sport.value == value %} is-selected{% endif %}"
+                      data-sport-value="{{ value }}"
+                      data-sport-label="{{ label }}">
+                {{ label }}
+              </button>
+            </li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block domready %}
+(function () {
+  var root = document.querySelector('[data-group-create]');
+  if (!root) {
+    return;
+  }
+
+  var sheet = document.getElementById('group-create-sport-sheet');
+  var sportSelect = root.querySelector('select[name="sport"]');
+  var sportLabel = root.querySelector('[data-sport-label]');
+  var trigger = root.querySelector('[data-sport-trigger]');
+
+  function openSheet() {
+    if (!sheet) {
+      return;
+    }
+    sheet.hidden = false;
+    document.body.classList.add('group-create-sheet-open');
+  }
+
+  function closeSheet() {
+    if (!sheet) {
+      return;
+    }
+    sheet.hidden = true;
+    document.body.classList.remove('group-create-sheet-open');
+  }
+
+  if (trigger) {
+    trigger.addEventListener('click', openSheet);
+    trigger.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openSheet();
+      }
+    });
+  }
+
+  if (sheet) {
+    sheet.addEventListener('click', function (event) {
+      if (event.target.closest('[data-sheet-close]')) {
+        closeSheet();
+        return;
+      }
+      var item = event.target.closest('[data-sport-value]');
+      if (!item) {
+        return;
+      }
+      if (sportSelect) {
+        sportSelect.value = item.dataset.sportValue;
+      }
+      if (sportLabel) {
+        sportLabel.textContent = item.dataset.sportLabel || 'Выберите';
+      }
+      sheet.querySelectorAll('.group-create__sport-item').forEach(function (btn) {
+        btn.classList.toggle('is-selected', btn === item);
+      });
+      closeSheet();
+    });
+  }
+})();
+{% endblock %}

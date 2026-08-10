@@ -7,6 +7,7 @@ urlpatterns = [
         views.PreferencesPasswordChangeView.as_view(),
         name="password_change",
     ),
+    path("login/", views.user_login, name="login"),
     path("", include("django.contrib.auth.urls")),
     path("", views.dashboard, name="dashboard"),
     path("preferences/", views.preferences, name="preferences"),
@@ -57,6 +58,7 @@ urlpatterns = [
     ),
     path("register/", views.register, name="register"),
     path("edit/", views.edit, name="edit"),
+    path("edit/phone/verify/", views.edit_phone_verify, name="edit_phone_verify"),
     path("users/", views.user_list, name="user_list"),
     path("users/follow", views.user_follow, name="user_follow"),
     path("users/friendship", views.user_friendship, name="user_friendship"),
@@ -88,5 +90,4 @@ urlpatterns = [
     ),
     path("users/<username>/", views.user_detail, name="user_detail"),
     path("search/", views.account_search, name="account_search"),
-    # path('results/', views.search_results, name='search_results'),
 ]

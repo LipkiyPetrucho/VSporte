@@ -1,0 +1,48 @@
+{% load static thumbnail game_extras %}
+{% if communities %}
+  {% for community in communities %}
+    <a href="{{ community.get_absolute_url }}" class="groups-list-card text-decoration-none">
+        <div class="groups-list-card__cover">
+            {% if community.image %}
+              <img src="{% thumbnail community.image 120x120 crop %}"
+                   alt=""
+                   class="groups-list-card__image">
+            {% else %}
+              <span class="groups-list-card__image groups-list-card__image--placeholder"
+                    aria-hidden="true">
+                <i class="fas {{ community.sport|sport_icon }}"></i>
+              </span>
+            {% endif %}
+        </div>
+        <div class="groups-list-card__details">
+            <div class="groups-list-card__row">
+                <h2 class="groups-list-card__title">{{ community.name }}</h2>
+                <span class="groups-list-card__sport-icon" aria-hidden="true">
+                    <i class="fas {{ community.sport|sport_icon }}"></i>
+                </span>
+            </div>
+            <p class="groups-list-card__sport">{{ community.get_sport_display }}</p>
+            <div class="groups-list-card__meta">
+                <span class="groups-list-card__owner">
+                    {% if community.owner.profile.photo %}
+                      <img src="{% thumbnail community.owner.profile.photo 28x28 crop %}"
+                           alt=""
+                           class="groups-list-card__owner-avatar">
+                    {% else %}
+                      <img src="{% static 'image/jpeg/default-profile-user.jpg' %}"
+                           alt=""
+                           class="groups-list-card__owner-avatar">
+                    {% endif %}
+                    {{ community.owner.username }}
+                </span>
+                <span class="groups-list-card__members">
+                    <i class="fas fa-users" aria-hidden="true"></i>
+                    {{ community.members.count }}
+                </span>
+            </div>
+        </div>
+    </a>
+  {% endfor %}
+{% else %}
+  <p class="groups-page-empty">Пока нет групп. Создайте первую!</p>
+{% endif %}

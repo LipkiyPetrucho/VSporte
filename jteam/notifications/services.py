@@ -21,11 +21,24 @@ GAME_NOTIFICATION_TYPES = {
     Notification.TYPE_GAME_UPDATED,
 }
 
+GROUP_NOTIFICATION_TYPES = {
+    Notification.TYPE_GROUP_JOIN_REQUEST,
+    Notification.TYPE_GROUP_INVITATION,
+    Notification.TYPE_GROUP_JOIN_ACCEPTED,
+    Notification.TYPE_GROUP_JOIN_REJECTED,
+    Notification.TYPE_GROUP_MEMBER_REMOVED,
+}
+
 # Категории настроек → существующие типы in-app уведомлений.
 # Напоминания об играх пока без бэкенда-источника.
 NOTIFICATION_TYPE_PREF_FIELD = {
     Notification.TYPE_FRIENDSHIP_REQUEST: "notify_social_updates",
     Notification.TYPE_FRIENDSHIP_ACCEPTED: "notify_social_updates",
+    Notification.TYPE_GROUP_JOIN_REQUEST: "notify_social_updates",
+    Notification.TYPE_GROUP_INVITATION: "notify_social_updates",
+    Notification.TYPE_GROUP_JOIN_ACCEPTED: "notify_social_updates",
+    Notification.TYPE_GROUP_JOIN_REJECTED: "notify_social_updates",
+    Notification.TYPE_GROUP_MEMBER_REMOVED: "notify_social_updates",
     Notification.TYPE_GAME_PARTICIPATION_REQUEST: "notify_activity_updates",
     Notification.TYPE_GAME_INVITATION: "notify_activity_updates",
     Notification.TYPE_GAME_PARTICIPATION_ACCEPTED: "notify_activity_updates",
@@ -42,6 +55,10 @@ def _actor_display_name(user):
 
 def _game_sport_label(game):
     return game.get_sport_display()
+
+
+def _community_name(community):
+    return getattr(community, "name", "группу")
 
 
 def get_notification_message(notification):
@@ -88,6 +105,30 @@ def get_notification_message(notification):
         sport = _game_sport_label(target)
         return f"{actor} изменил условия мероприятия {sport}"
 
+    if notification_type == Notification.TYPE_GROUP_JOIN_REQUEST:
+        community = getattr(target, "community", target)
+        name = _community_name(community)
+        return f"{actor} запросил вступление в группу {name}"
+
+    if notification_type == Notification.TYPE_GROUP_INVITATION:
+        community = getattr(target, "community", target)
+        name = _community_name(community)
+        return f"{actor} пригласил вас в группу {name}"
+
+    if notification_type == Notification.TYPE_GROUP_JOIN_ACCEPTED:
+        community = getattr(target, "community", target)
+        name = _community_name(community)
+        return f"{actor} принял вашу заявку на вступление в группу {name}"
+
+    if notification_type == Notification.TYPE_GROUP_JOIN_REJECTED:
+        community = getattr(target, "community", target)
+        name = _community_name(community)
+        return f"{actor} отклонил вашу заявку на вступление в группу {name}"
+
+    if notification_type == Notification.TYPE_GROUP_MEMBER_REMOVED:
+        name = _community_name(target)
+        return f"{actor} исключил вас из группы {name}"
+
     return f"{actor} отправил вам уведомление"
 
 
@@ -100,6 +141,15 @@ def get_notification_game(notification):
     return getattr(target, "game", target)
 
 
+def get_notification_community(notification):
+    if notification.notification_type not in GROUP_NOTIFICATION_TYPES:
+        return None
+    target = notification.target
+    if target is None:
+        return None
+    return getattr(target, "community", target)
+
+
 def get_notification_url(notification):
     if notification.notification_type in FRIENDSHIP_NOTIFICATION_TYPES:
         return reverse("user_detail", args=[notification.actor.username])
@@ -108,6 +158,9 @@ def get_notification_url(notification):
         if notification.notification_type == Notification.TYPE_CHAT_MESSAGE:
             return game.get_chat_url()
         return game.get_absolute_url()
+    community = get_notification_community(notification)
+    if community is not None:
+        return community.get_absolute_url()
     return reverse("dashboard")
 
 

@@ -1,12 +1,21 @@
 from django.contrib import admin
 
-from .models import Friendship, Profile, UserBlock
+from .models import Friendship, PhoneVerification, Profile, UserBlock
 
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ["user", "date_of_birth", "photo"]
+    list_display = ["user", "phone", "phone_verified", "date_of_birth", "photo"]
+    list_filter = ["phone_verified"]
+    search_fields = ["user__username", "phone"]
     raw_id_fields = ["user"]
+
+
+@admin.register(PhoneVerification)
+class PhoneVerificationAdmin(admin.ModelAdmin):
+    list_display = ["phone", "code", "purpose", "created_at", "expires_at", "is_used"]
+    list_filter = ["purpose", "is_used"]
+    search_fields = ["phone"]
 
 
 @admin.register(Friendship)

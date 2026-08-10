@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static thumbnail game_extras %}
+
+{% block title %}Группы{% endblock %}
+{% block body_class %} class="page-groups has-mobile-bottom-nav"{% endblock %}
+
+{% block mobile_bottom_nav %}
+  {% include "includes/mobile_bottom_nav.html" with active="dashboard" %}
+{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/group-list.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="groups-page">
+    <header class="groups-page__compact-header dashboard-mobile-header">
+        <button type="button"
+                class="dashboard-mobile-header__location user-city-trigger"
+                data-city-trigger
+                aria-haspopup="dialog"
+                aria-controls="user-city-picker">
+            <i class="fas fa-map-marker-alt"></i>
+            <span data-city-label>Определяем город...</span>
+        </button>
+        <div class="dashboard-mobile-header__actions">
+            {% include "includes/notification_bell.html" with extra_class="dashboard-mobile-header__icon-btn" %}
+            <button type="button"
+                    class="dashboard-mobile-header__icon-btn"
+                    id="groups-page-menu-toggle"
+                    aria-label="Меню"
+                    aria-expanded="false"
+                    aria-controls="groups-page-menu">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <nav class="groups-page__menu dashboard-mobile-menu" id="groups-page-menu" hidden>
+        <a href="{% url 'dashboard' %}">Главная</a>
+        <a href="{% url 'games:list' %}">События</a>
+        <a href="{% url 'groups:list' %}">Группы</a>
+        <a href="{% url 'user_list' %}">Игроки</a>
+        <a href="{% url 'location:list' %}">Площадки</a>
+        <a href="{% url 'user_detail' request.user.username %}">Профиль</a>
+    </nav>
+
+    <h1 class="groups-page__desktop-title">Группы</h1>
+
+    <div class="groups-page-toolbar">
+        <a href="{% url 'groups:create' %}" class="groups-page-create-btn text-decoration-none">
+            <span class="groups-page-create-btn__icon"><i class="fas fa-plus"></i></span>
+            Создать группу
+        </a>
+        <button type="button"
+                class="groups-page-filter-btn"
+                id="groups-page-filter-toggle"
+                aria-label="Фильтры"
+                aria-expanded="false"
+                aria-controls="groups-page-filter">
+            <i class="fas fa-filter"></i>
+        </button>
+    </div>
+
+    <div class="groups-page-filter" id="groups-page-filter" hidden>
+        <form method="get" class="groups-page-filter__form">
+            <div class="groups-page-filter__field">
+                <label for="{{ filter_form.sport.id_for_label }}">Спорт</label>
+                {{ filter_form.sport }}
+            </div>
+            <button type="submit" class="groups-page-filter__submit">Применить</button>
+        </form>
+    </div>
+
+    <div id="group-list" class="groups-page-list">
+        {% include "groups/community/list_communities.html" %}
+    </div>
+
+    {% if communities.paginator.num_pages > 1 %}
+      <div class="groups-page-pagination">
+        {% if communities.has_previous %}
+          <a href="?page={{ communities.previous_page_number }}{% if request.GET.sport %}&sport={{ request.GET.sport }}{% endif %}"
+             class="groups-page-pagination__link">Назад</a>
+        {% endif %}
+        <span class="groups-page-pagination__current">
+          {{ communities.number }} / {{ communities.paginator.num_pages }}
+        </span>
+        {% if communities.has_next %}
+          <a href="?page={{ communities.next_page_number }}{% if request.GET.sport %}&sport={{ request.GET.sport }}{% endif %}"
+             class="groups-page-pagination__link">Далее</a>
+        {% endif %}
+      </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block domready %}
+var menuToggle = document.getElementById('groups-page-menu-toggle');
+var pageMenu = document.getElementById('groups-page-menu');
+if (menuToggle && pageMenu) {
+    menuToggle.addEventListener('click', function() {
+        var isOpen = !pageMenu.hidden;
+        pageMenu.hidden = isOpen;
+        menuToggle.setAttribute('aria-expanded', String(!isOpen));
+    });
+}
+
+var filterToggle = document.getElementById('groups-page-filter-toggle');
+var pageFilter = document.getElementById('groups-page-filter');
+if (filterToggle && pageFilter) {
+    filterToggle.addEventListener('click', function() {
+        var isOpen = !pageFilter.hidden;
+        pageFilter.hidden = isOpen;
+        filterToggle.setAttribute('aria-expanded', String(!isOpen));
+    });
+}
+{% endblock %}

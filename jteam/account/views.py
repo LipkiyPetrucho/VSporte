@@ -10,13 +10,14 @@ from django.views.decorators.http import require_POST, require_http_methods
 from django.db import transaction
 import json
 from .forms import (
-    LoginForm,
+    EmailLoginForm,
     UserRegistrationForm,
     UserEditForm,
     ProfileEditForm,
     InterestsForm,
     SearchForm,
     PreferencesPasswordChangeForm,
+    PhoneVerificationForm,
 )
 from .interests import INTEREST_CATEGORIES
 from .location_service import (
@@ -24,7 +25,12 @@ from .location_service import (
     get_current_location,
     set_living_location,
 )
-from .models import Profile, Contact, Friendship
+from .models import Profile, Contact, Friendship, PhoneVerification
+from .phone_service import (
+    PhoneValidationError,
+    create_and_send_code,
+    verify_code,
+)
 from actions.utils import create_action, get_user_activity
 from actions.models import Action
 from games.models import Game
@@ -48,26 +54,38 @@ from .service import (
 )
 
 
+PENDING_PHONE_CHANGE_SESSION_KEY = "pending_phone_change"
+
+
 def user_login(request):
+    """Вход по email/логину и паролю."""
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+
+    email_form = EmailLoginForm()
+    next_url = request.GET.get("next") or request.POST.get("next") or ""
+
     if request.method == "POST":
-        form = LoginForm(request.POST)
-        if form.is_valid():
-            cd = form.cleaned_data
+        email_form = EmailLoginForm(request.POST)
+        if email_form.is_valid():
+            cd = email_form.cleaned_data
             user = authenticate(
-                request, username=cd["username"], password=cd["password"]
+                request, username=cd["login"], password=cd["password"]
             )
-            if user is not None:
-                if user.is_active:
-                    login(request, user)
-                    messages.success(request, f"Добро пожаловать, {user.username}!")
-                    return redirect("dashboard")
-                else:
-                    messages.error(request, "Аккаунт отключен")
-            else:
-                messages.error(request, "Неверный логин или пароль")
-    else:
-        form = LoginForm()
-    return render(request, "account/login.html", {"form": form})
+            if user is not None and user.is_active:
+                login(request, user)
+                messages.success(request, f"Добро пожаловать, {user.username}!")
+                return redirect(next_url or "dashboard")
+            messages.error(request, "Неверный логин/email или пароль")
+
+    return render(
+        request,
+        "registration/login.html",
+        {
+            "email_form": email_form,
+            "next": next_url,
+        },
+    )
 
 
 @login_required
@@ -307,24 +325,35 @@ def delete_recent_location_view(request):
 
 
 def register(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+
     if request.method == "POST":
         user_form = UserRegistrationForm(request.POST)
         if user_form.is_valid():
-            # Create a new user object,
-            # but don't save it yet.
-            new_user = user_form.save(commit=False)
-            # set the selected password
-            new_user.set_password(user_form.cleaned_data["password"])
+            with transaction.atomic():
+                new_user = User(
+                    username=user_form.cleaned_data["username"],
+                    first_name=user_form.cleaned_data.get("first_name") or "",
+                    email=user_form.cleaned_data["email"],
+                )
+                new_user.set_password(user_form.cleaned_data["password"])
+                new_user.save()
+                profile, _created = Profile.objects.get_or_create(user=new_user)
+                phone = user_form.cleaned_data.get("phone")
+                if phone:
+                    profile.phone = phone
+                    profile.phone_verified = False
+                    profile.save(update_fields=["phone", "phone_verified"])
 
-            # save the object User
-            new_user.save()
-            # Создать профиль пользователя
-            Profile.objects.create(user=new_user)
             create_action(new_user, "создал(а) учётную запись")
-            messages.success(request, f"Аккаунт {new_user.username} успешно создан!")
-            return render(request, "account/register_done.html", {"new_user": new_user})
-        else:
-            messages.error(request, "Пожалуйста, исправьте ошибки в форме")
+            messages.success(
+                request, f"Аккаунт {new_user.username} успешно создан!"
+            )
+            return render(
+                request, "account/register_done.html", {"new_user": new_user}
+            )
+        messages.error(request, "Пожалуйста, исправьте ошибки в форме")
     else:
         user_form = UserRegistrationForm()
     return render(request, "account/register.html", {"user_form": user_form})
@@ -333,20 +362,45 @@ def register(request):
 @login_required
 def edit(request):
     """Обрабатывает редактирование профиля пользователя."""
+    profile = ensure_profile(request.user)
     if request.method == "POST":
         user_form = UserEditForm(instance=request.user, data=request.POST)
         profile_form = ProfileEditForm(
-            instance=request.user.profile, data=request.POST, files=request.FILES
+            instance=profile, data=request.POST, files=request.FILES
         )
         if user_form.is_valid() and profile_form.is_valid():
             user_form.save()
+            old_phone = profile.phone
+            new_phone = profile_form.cleaned_data.get("phone")
             profile_form.save()
+
+            if new_phone != old_phone:
+                if new_phone is None:
+                    profile.phone = None
+                    profile.phone_verified = False
+                    profile.save(update_fields=["phone", "phone_verified"])
+                    messages.success(request, "Профиль обновлён, телефон удалён")
+                    return redirect("user_detail", username=request.user.username)
+                try:
+                    create_and_send_code(
+                        new_phone, purpose=PhoneVerification.PURPOSE_CHANGE
+                    )
+                except PhoneValidationError as exc:
+                    messages.error(request, str(exc))
+                    return redirect("edit")
+                request.session[PENDING_PHONE_CHANGE_SESSION_KEY] = new_phone
+                messages.success(
+                    request,
+                    f"Профиль сохранён. Код подтверждения отправлен на {new_phone}.",
+                )
+                return redirect("edit_phone_verify")
+
             messages.success(request, "Профиль успешно обновлён")
             return redirect("user_detail", username=request.user.username)
         messages.error(request, "Ошибка при обновлении профиля")
     else:
         user_form = UserEditForm(instance=request.user)
-        profile_form = ProfileEditForm(instance=request.user.profile)
+        profile_form = ProfileEditForm(instance=profile)
     return render(
         request,
         "account/edit.html",
@@ -355,6 +409,66 @@ def edit(request):
             "profile_form": profile_form,
             "gender_choices": Profile.GENDER_CHOICES,
         },
+    )
+
+
+@login_required
+def edit_phone_verify(request):
+    pending_phone = request.session.get(PENDING_PHONE_CHANGE_SESSION_KEY)
+    if not pending_phone:
+        messages.error(request, "Нет ожидающей смены телефона.")
+        return redirect("edit")
+
+    form = PhoneVerificationForm()
+    if request.method == "POST":
+        action = request.POST.get("action", "verify")
+        if action == "resend":
+            try:
+                create_and_send_code(
+                    pending_phone, purpose=PhoneVerification.PURPOSE_CHANGE
+                )
+                messages.success(
+                    request, f"Новый код отправлен на {pending_phone}."
+                )
+            except PhoneValidationError as exc:
+                messages.error(request, str(exc))
+            return redirect("edit_phone_verify")
+
+        form = PhoneVerificationForm(request.POST)
+        if form.is_valid():
+            try:
+                verify_code(
+                    pending_phone,
+                    form.cleaned_data["code"],
+                    purpose=PhoneVerification.PURPOSE_CHANGE,
+                )
+            except PhoneValidationError as exc:
+                form.add_error("code", str(exc))
+                messages.error(request, str(exc))
+            else:
+                if (
+                    Profile.objects.filter(phone=pending_phone)
+                    .exclude(user=request.user)
+                    .exists()
+                ):
+                    request.session.pop(PENDING_PHONE_CHANGE_SESSION_KEY, None)
+                    messages.error(
+                        request, "Этот номер телефона уже используется."
+                    )
+                    return redirect("edit")
+
+                profile = ensure_profile(request.user)
+                profile.phone = pending_phone
+                profile.phone_verified = True
+                profile.save(update_fields=["phone", "phone_verified"])
+                request.session.pop(PENDING_PHONE_CHANGE_SESSION_KEY, None)
+                messages.success(request, "Номер телефона подтверждён и сохранён")
+                return redirect("user_detail", username=request.user.username)
+
+    return render(
+        request,
+        "account/edit_phone_verify.html",
+        {"form": form, "phone": pending_phone},
     )
 
 
@@ -541,6 +655,7 @@ def update_notification_setting(request):
 
 CONTACT_VISIBILITY_OPTIONS = (
     ("show_email", "Показывать email другим пользователям"),
+    ("show_phone", "Показывать телефон другим пользователям"),
     ("show_location", "Показывать локацию другим пользователям"),
     ("show_gender", "Показывать пол другим пользователям"),
 )
