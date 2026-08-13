@@ -185,7 +185,6 @@ media/
 /jteam/locale/en/LC_MESSAGES/django.po
 
 *.iml
-**/migrations/
 
 # Исключить локальную базу данных SQLite (если она есть)
 jteam/db.sqlite3
