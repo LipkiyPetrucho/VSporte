@@ -1,10 +1,17 @@
+# Прод: docker compose -f docker-compose.prod.yml up -d --build
+# Требуется: .env с DJANGO_ENV=prod, сертификаты в ./certs/{fullchain,privkey}.pem
+# Бэкапы БД: сервис backup пишет ./backups/; restore — см. PROD_CHECKLIST.md
+# Smoke: python scripts/prod_smoke.py --base-url https://jteam.ru
 services:
   nginx:
     image: nginx:1.27-alpine
     ports:
       - "80:80"
+      - "443:443"
     volumes:
-      - ./jteam/nginx/nginx.local.conf:/etc/nginx/nginx.conf:ro
+      - ./jteam/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - ./certbot/www:/var/www/certbot:ro
       - staticfiles_data:/app/staticfiles:ro
       - media_data:/app/media
     depends_on:
@@ -16,13 +23,10 @@ services:
   web-app:
     build:
       context: .
-    ports:
-      - "8000:8000"
+    # Код и entrypoint из образа — без bind ./jteam
     volumes:
-      - ./jteam:/jteam
       - media_data:/jteam/media
       - staticfiles_data:/jteam/staticfiles
-      - ./entrypoint.sh:/entrypoint.sh
     env_file:
       - .env
     environment:
@@ -32,8 +36,6 @@ services:
       - DB_PASS=${POSTGRES_DB_PASSWORD}
       - REDIS_HOST=redis
       - CELERY_BROKER_URL=redis://redis:6379/0
-    # Явно: иначе без rebuild образа остаётся дефолтный CMD python3 и контейнер сразу выходит
-    command: sh /entrypoint.sh
     depends_on:
       database:
         condition: service_healthy
@@ -66,8 +68,7 @@ services:
   redis:
     image: redis:7.0.5-alpine
     hostname: redis
-    ports:
-      - "6379:6379"
+    # Порт наружу не публикуем
     restart: always
     volumes:
       - redis_data:/data
@@ -87,7 +88,6 @@ services:
     entrypoint: celery
     command: -A jteam.celery:app worker --loglevel=info
     volumes:
-      - ./jteam:/jteam
       - media_data:/jteam/media
     env_file:
       - .env
@@ -113,7 +113,6 @@ services:
     entrypoint: celery
     command: [ "-A", "jteam.celery:app", "beat", "--loglevel=info" ]
     volumes:
-      - ./jteam:/jteam
       - media_data:/jteam/media
     env_file:
       - .env
@@ -131,6 +130,30 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
     networks:
       - vsporte
+
+  # Периодический pg_dump на хост ./backups (см. PROD_CHECKLIST.md)
+  backup:
+    image: postgres:14.6-alpine
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PGHOST: database
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_DB_USER}
+      PGPASSWORD: ${POSTGRES_DB_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB_NAME}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./backups:/backups
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - vsporte
+    entrypoint: ["/bin/sh", "/scripts/backup-postgres.sh"]
 
 networks:
   vsporte:

@@ -5,10 +5,13 @@ from .settings import *
 DEBUG = True
 THUMBNAIL_DEBUG = True
 
+INSTALLED_APPS = [*INSTALLED_APPS, "debug_toolbar"]
 MIDDLEWARE = [
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "jteam.middleware.LocalhostRedirectMiddleware",
     *MIDDLEWARE,
 ]
+INTERNAL_IPS = ["127.0.0.1", "localhost", ".jteam.ru"]
 
 ALLOWED_HOSTS = [
     "localhost",

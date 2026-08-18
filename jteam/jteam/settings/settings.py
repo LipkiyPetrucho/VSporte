@@ -41,12 +41,10 @@ INSTALLED_APPS = [
     "crispy_bootstrap5",
     "fontawesomefree",
     "easy_thumbnails",
-    "debug_toolbar",
     "bootstrap5",
 ]
 
 MIDDLEWARE = [
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -226,9 +224,6 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 ABSOLUTE_URL_OVERRIDES = {
     "auth.user": lambda u: reverse_lazy("user_detail", args=[u.username])
 }
-
-# debug_toolbar
-INTERNAL_IPS = ["127.0.0.1", "localhost", ".jteam.ru"]
 
 # ключ, который будет использоваться для хранения корзины в пользовательском сеансе.
 CART_SESSION_ID = "cart"

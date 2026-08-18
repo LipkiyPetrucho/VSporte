@@ -9,12 +9,16 @@ RUN apk update && \
     pango-dev zlib-dev jpeg-dev openjpeg-dev g++ libffi-dev \
     font-liberation netcat-openbsd
 
-# Копирование requirements.txt и кода проекта
+# Копирование requirements.txt, кода и entrypoint
 COPY requirements.txt /temp/requirements.txt
 COPY jteam /jteam
+COPY entrypoint.sh /entrypoint.sh
 
 WORKDIR /jteam
 EXPOSE 8000
 
 # Установка зависимостей из requirements.txt
-RUN pip install -r /temp/requirements.txt
+RUN pip install -r /temp/requirements.txt && chmod +x /entrypoint.sh
+
+# web-app: migrate + collectstatic + Daphne (worker/beat переопределяют entrypoint)
+CMD ["sh", "/entrypoint.sh"]

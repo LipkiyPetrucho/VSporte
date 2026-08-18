@@ -11,6 +11,9 @@ echo "Database is available"
 echo "Running migrations..."
 python manage.py migrate --noinput
 
+echo "Collecting static files..."
+python manage.py collectstatic --noinput
+
 # ASGI-сервер: HTTP + WebSocket (Channels). gunicorn/wsgi больше не используем.
 echo "Starting Daphne (ASGI)..."
 exec daphne -b 0.0.0.0 -p 8000 jteam.asgi:application
