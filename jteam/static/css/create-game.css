@@ -281,11 +281,11 @@ body.page-create-game .create-event {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
-.create-event__toggle input:checked + .create-event__toggle-slider {
+.create-event__toggle input:checked+.create-event__toggle-slider {
     background: var(--ce-accent);
 }
 
-.create-event__toggle input:checked + .create-event__toggle-slider::before {
+.create-event__toggle input:checked+.create-event__toggle-slider::before {
     transform: translateX(20px);
 }
 

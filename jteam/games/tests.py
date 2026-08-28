@@ -155,6 +155,118 @@ class GameStatusUpdateTest(TestCase):
         past_game.sync_status()
         self.assertEqual(past_game.status, 'finished')
 
+    def test_sync_game_statuses_uses_bulk_update(self):
+        """Завершение игр — один UPDATE, а не save() в цикле."""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        from games.tasks import sync_game_statuses
+
+        with CaptureQueriesContext(connection) as ctx:
+            started_count, finished_count = sync_game_statuses()
+
+        self.assertGreaterEqual(started_count, 1)
+        self.assertGreaterEqual(finished_count, 1)
+        updates = [
+            query["sql"]
+            for query in ctx.captured_queries
+            if query["sql"].lstrip().upper().startswith("UPDATE")
+        ]
+        self.assertEqual(len(updates), 2)
+        self.assertTrue(
+            any("start_time + duration" in query for query in updates),
+            updates,
+        )
+
+
+class GameListQueryTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="listuser",
+            password="testpass123",
+        )
+        Profile.objects.get_or_create(user=self.user)
+        self.game = Game.objects.create(
+            user=self.user,
+            sport="football",
+            place="List Place",
+            start_time=timezone.now() + timedelta(hours=2),
+            duration=timedelta(hours=1),
+            price=100,
+            max_players=10,
+            status="open",
+        )
+
+    def test_game_list_does_not_sync_statuses_on_request(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        self.client.force_login(self.user)
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(reverse("games:list"))
+        self.assertEqual(response.status_code, 200)
+        updates = [
+            query["sql"]
+            for query in ctx.captured_queries
+            if query["sql"].lstrip().upper().startswith("UPDATE")
+        ]
+        self.assertEqual(updates, [])
+        game = response.context["games"][0]
+        self.assertEqual(game.joined_players_count, 0)
+
+
+class GameJoinQueryTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.organizer = User.objects.create_user(
+            username="join_org",
+            password="testpass123",
+        )
+        Profile.objects.get_or_create(user=self.organizer)
+        self.player = User.objects.create_user(
+            username="join_player",
+            password="testpass123",
+        )
+        Profile.objects.get_or_create(user=self.player)
+        self.game = Game.objects.create(
+            user=self.organizer,
+            sport="football",
+            place="Join Arena",
+            start_time=timezone.now() + timedelta(hours=2),
+            duration=timedelta(hours=1),
+            price=100,
+            max_players=10,
+            extra_players=1,
+            is_team_game=True,
+            status="open",
+        )
+        self.game.joined_players.add(self.organizer, self.player)
+        self.join_url = reverse("games:join")
+
+    def test_leave_response_does_not_count_joined_players(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        self.client.force_login(self.player)
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.post(
+                self.join_url,
+                {"id": self.game.pk, "action": "leave"},
+            )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "ok")
+        self.assertEqual(data["joined_count"], 1)
+        self.assertEqual(data["players_count"], 2)
+        count_queries = [
+            query["sql"]
+            for query in ctx.captured_queries
+            if "games_game_joined_players" in query["sql"]
+            and "COUNT(*)" in query["sql"].upper()
+        ]
+        self.assertEqual(count_queries, [])
+
 
 class GameTeamsApiTest(TestCase):
     def setUp(self):
@@ -536,3 +648,15 @@ class GameRemovePlayerTest(TestCase):
         self.assertTrue(
             self.game.joined_players.filter(pk=self.player.pk).exists()
         )
+
+
+class GameDateFormatTests(TestCase):
+    def test_game_date_ru_uses_russian_month(self):
+        from datetime import datetime
+
+        from django.utils.timezone import make_aware
+
+        from games.templatetags.game_extras import game_date_ru
+
+        value = make_aware(datetime(2026, 8, 17, 15, 0))
+        self.assertEqual(game_date_ru(value), "17 авг. 2026")

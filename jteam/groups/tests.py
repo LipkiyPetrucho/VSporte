@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from account.models import Friendship, Profile
@@ -481,3 +483,49 @@ class CommunityModerationTest(CommunityMembershipBaseTest):
         self.assertTrue(
             self.community.members.filter(pk=self.owner.pk).exists()
         )
+
+    def test_leave_response_does_not_count_members(self):
+        self.community.members.add(self.applicant)
+        with CaptureQueriesContext(connection) as ctx:
+            response = self._post_leave(self.applicant)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "ok")
+        self.assertEqual(data["members_count"], 1)
+        count_queries = [
+            query["sql"]
+            for query in ctx.captured_queries
+            if "groups_community_members" in query["sql"]
+            and "COUNT(*)" in query["sql"].upper()
+        ]
+        self.assertEqual(count_queries, [])
+
+
+class CommunityListQueryTests(CommunityMembershipBaseTest):
+    def test_list_annotates_members_count_without_per_row_count(self):
+        self.community.slug = "football-club"
+        self.community.save(update_fields=["slug"])
+        second = Community.objects.create(
+            owner=self.owner,
+            name="Tennis Club",
+            sport="tennis",
+            slug="tennis-club",
+        )
+        second.members.add(self.owner, self.friend)
+
+        self.client.force_login(self.owner)
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(reverse("groups:list"))
+        self.assertEqual(response.status_code, 200)
+        communities = list(response.context["communities"])
+        counts = {community.slug: community.members_count for community in communities}
+        self.assertEqual(counts["football-club"], 1)
+        self.assertEqual(counts["tennis-club"], 2)
+
+        extra_counts = [
+            query["sql"]
+            for query in ctx.captured_queries
+            if 'FROM "groups_community_members"' in query["sql"]
+            and "COUNT(*)" in query["sql"].upper()
+        ]
+        self.assertEqual(extra_counts, [])

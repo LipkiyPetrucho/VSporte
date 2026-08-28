@@ -94,7 +94,7 @@
         </div>
 
         <div id="members-preview">
-          {% if community.members.exists %}
+          {% if members_count %}
             {% for member in community.members.all %}
               <div class="group-view-member{% if member == community.owner %} group-view-member--owner{% endif %}">
                 {% if member.profile.photo %}

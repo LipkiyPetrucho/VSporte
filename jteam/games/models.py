@@ -117,6 +117,9 @@ class Game(models.Model):
         verbose_name_plural = "Игры"
         indexes = [
             models.Index(fields=["created_at"]),
+            models.Index(fields=["status", "start_time"], name="games_game_status_start_idx"),
+            models.Index(fields=["sport"], name="games_game_sport_idx"),
+            models.Index(fields=["-start_time"], name="games_game_start_time_idx"),
         ]
         ordering = ["created_at"]
 

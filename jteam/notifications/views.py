@@ -15,6 +15,7 @@ def notification_list(request):
     notifications_qs = (
         Notification.objects.filter(recipient=request.user)
         .select_related("actor", "actor__profile", "target_ct")
+        .prefetch_related("target")
         .order_by("-created")
     )
     mark_all_as_read(request.user)

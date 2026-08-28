@@ -1,7 +1,6 @@
 from django.contrib.auth.models import User
 from django.contrib.postgres.search import TrigramSimilarity
-from django.db.models import Q, TextField
-from django.db.models.functions import Cast
+from django.db.models import Q
 from django.utils import timezone
 
 from games.models import Game
@@ -56,74 +55,91 @@ def get_blocked_users(user):
     )
 
 
-def search_users(query):
+def search_users(query, queryset=None):
     """Searches for users by first name, last name or login (case insensitive)
     using trigrams.
     Returns users by partial match with the query.
     """
-    username_cast = Cast("username", TextField())
-    first_name_cast = Cast("first_name", TextField())
-    last_name_cast = Cast("last_name", TextField())
-
+    qs = queryset if queryset is not None else User.objects.all()
     search_query = (
-        TrigramSimilarity(username_cast, query)
-        + TrigramSimilarity(first_name_cast, query)
-        + TrigramSimilarity(last_name_cast, query)
+        TrigramSimilarity("username", query)
+        + TrigramSimilarity("first_name", query)
+        + TrigramSimilarity("last_name", query)
     )
-
-    results = (
-        User.objects.annotate(similarity=search_query)
+    return (
+        qs.annotate(similarity=search_query)
         .filter(similarity__gt=0.1)
         .order_by("-similarity")
     )
-    return results
 
 
 def get_coplayed_user_ids(user):
     """Users who participated in the same games as the given user."""
-    game_ids = Game.objects.filter(
-        Q(joined_players=user) | Q(user=user)
-    ).values_list("id", flat=True)
-
+    my_games = Game.objects.filter(Q(joined_players=user) | Q(user=user))
     return set(
         User.objects.filter(
-            Q(joined_games__id__in=game_ids) | Q(user_games_created__id__in=game_ids)
+            Q(joined_games__in=my_games) | Q(user_games_created__in=my_games)
         )
         .exclude(pk=user.pk)
+        .distinct()
         .values_list("pk", flat=True)
     )
+
+
+def get_friendship_statuses_for_users(viewer, others):
+    """Статусы дружбы viewer→other одним запросом. Ключ — pk другого пользователя."""
+    other_ids = [user.pk for user in others if user.pk != viewer.pk]
+    if not other_ids:
+        return {}
+
+    rows = Friendship.objects.filter(
+        Q(from_user=viewer, to_user_id__in=other_ids)
+        | Q(to_user=viewer, from_user_id__in=other_ids)
+    ).values("from_user_id", "to_user_id", "status")
+
+    friends = set()
+    pending_sent = set()
+    pending_received = set()
+    for row in rows:
+        other_id = (
+            row["to_user_id"]
+            if row["from_user_id"] == viewer.pk
+            else row["from_user_id"]
+        )
+        if row["status"] == Friendship.ACCEPTED:
+            friends.add(other_id)
+        elif row["status"] == Friendship.PENDING:
+            if row["from_user_id"] == viewer.pk:
+                pending_sent.add(other_id)
+            else:
+                pending_received.add(other_id)
+
+    statuses = {}
+    for pk in other_ids:
+        if pk in friends:
+            statuses[pk] = "friends"
+        elif pk in pending_sent:
+            statuses[pk] = "pending_sent"
+        elif pk in pending_received:
+            statuses[pk] = "pending_received"
+        else:
+            statuses[pk] = "none"
+    return statuses
 
 
 def get_friendship_status(viewer, other):
     if viewer.pk == other.pk:
         return "self"
-
-    if Friendship.objects.filter(
-        Q(from_user=viewer, to_user=other, status=Friendship.ACCEPTED)
-        | Q(from_user=other, to_user=viewer, status=Friendship.ACCEPTED)
-    ).exists():
-        return "friends"
-
-    if Friendship.objects.filter(
-        from_user=viewer, to_user=other, status=Friendship.PENDING
-    ).exists():
-        return "pending_sent"
-
-    if Friendship.objects.filter(
-        from_user=other, to_user=viewer, status=Friendship.PENDING
-    ).exists():
-        return "pending_received"
-
-    return "none"
+    return get_friendship_statuses_for_users(viewer, [other]).get(other.pk, "none")
 
 
 def apply_played_filter(queryset, user, played_filter):
+    if played_filter not in ("played", "not_played"):
+        return queryset
     coplayed_ids = get_coplayed_user_ids(user)
     if played_filter == "played":
         return queryset.filter(pk__in=coplayed_ids)
-    if played_filter == "not_played":
-        return queryset.exclude(pk__in=coplayed_ids)
-    return queryset
+    return queryset.exclude(pk__in=coplayed_ids)
 
 
 def get_user_games(user):
@@ -131,15 +147,12 @@ def get_user_games(user):
 
 
 def get_friend_users(user):
-    friend_ids = set(
-        Friendship.objects.filter(
-            from_user=user, status=Friendship.ACCEPTED
-        ).values_list("to_user_id", flat=True)
-    ) | set(
-        Friendship.objects.filter(
-            to_user=user, status=Friendship.ACCEPTED
-        ).values_list("from_user_id", flat=True)
-    )
+    friend_ids = set()
+    for from_id, to_id in Friendship.objects.filter(
+        Q(from_user=user, status=Friendship.ACCEPTED)
+        | Q(to_user=user, status=Friendship.ACCEPTED)
+    ).values_list("from_user_id", "to_user_id"):
+        friend_ids.add(to_id if from_id == user.pk else from_id)
     return (
         User.objects.filter(pk__in=friend_ids)
         .select_related("profile")
@@ -157,6 +170,12 @@ def count_playpals(user):
 def count_incoming_friend_requests(user):
     return Friendship.objects.filter(
         to_user=user, status=Friendship.PENDING
+    ).count()
+
+
+def count_outgoing_friend_requests(user):
+    return Friendship.objects.filter(
+        from_user=user, status=Friendship.PENDING
     ).count()
 
 
@@ -186,11 +205,9 @@ def get_outgoing_friend_requests(user):
 
 def get_profile_stats(user):
     profile = ensure_profile(user)
-    games = get_user_games(user)
+    games = list(get_user_games(user).order_by("-start_time"))
     now = timezone.now()
-    last_game = (
-        games.filter(start_time__lte=now).order_by("-start_time").first()
-    )
+    last_game = next((game for game in games if game.start_time <= now), None)
     sport_labels = {**dict(Game.SPORTS), **INTEREST_LABELS}
 
     if profile.interests:
@@ -200,17 +217,17 @@ def get_profile_stats(user):
             if sport in sport_labels
         ]
     else:
-        sports = (
-            games.values_list("sport", flat=True).distinct().order_by("sport")
+        sports = sorted(
+            {
+                game.sport
+                for game in games
+                if game.sport in sport_labels
+            }
         )
-        interests = [
-            sport_labels.get(sport, sport)
-            for sport in sports
-            if sport in sport_labels
-        ]
+        interests = [sport_labels[sport] for sport in sports]
 
     return {
-        "events_count": games.count(),
+        "events_count": len(games),
         "playpals_count": count_playpals(user),
         "last_game": last_game,
         "interests": interests,

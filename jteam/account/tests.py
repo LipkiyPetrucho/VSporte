@@ -300,3 +300,124 @@ class PhoneChangeFlowTests(TestCase):
         mocked_send.assert_not_called()
         self.user.profile.refresh_from_db()
         self.assertEqual(self.user.profile.bio, "hello")
+
+
+class QueryOptimizationTests(TestCase):
+    def setUp(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from account.models import Friendship, Profile
+        from games.models import Game
+
+        self.viewer = User.objects.create_user(
+            username="viewer", password="pass12345"
+        )
+        Profile.objects.get_or_create(user=self.viewer)
+        self.friend = User.objects.create_user(
+            username="friend_user", password="pass12345"
+        )
+        Profile.objects.get_or_create(user=self.friend)
+        self.pending = User.objects.create_user(
+            username="pending_user", password="pass12345"
+        )
+        Profile.objects.get_or_create(user=self.pending)
+        self.stranger = User.objects.create_user(
+            username="stranger_user", password="pass12345"
+        )
+        Profile.objects.get_or_create(user=self.stranger)
+
+        Friendship.objects.create(
+            from_user=self.viewer,
+            to_user=self.friend,
+            status=Friendship.ACCEPTED,
+        )
+        Friendship.objects.create(
+            from_user=self.viewer,
+            to_user=self.pending,
+            status=Friendship.PENDING,
+        )
+
+        self.game = Game.objects.create(
+            user=self.viewer,
+            sport="football",
+            place="Test Place",
+            start_time=timezone.now() + timedelta(hours=2),
+            duration=timedelta(hours=1),
+            price=100,
+            max_players=10,
+        )
+        self.game.joined_players.add(self.viewer, self.friend)
+
+    def test_friendship_statuses_batched(self):
+        from account.service import get_friendship_statuses_for_users
+
+        others = [self.friend, self.pending, self.stranger]
+        with self.assertNumQueries(1):
+            statuses = get_friendship_statuses_for_users(self.viewer, others)
+        self.assertEqual(statuses[self.friend.pk], "friends")
+        self.assertEqual(statuses[self.pending.pk], "pending_sent")
+        self.assertEqual(statuses[self.stranger.pk], "none")
+
+    def test_played_filter_skips_coplayed_lookup_for_all(self):
+        from unittest.mock import patch
+
+        from account.service import apply_played_filter
+
+        qs = User.objects.exclude(pk=self.viewer.pk)
+        with patch("account.service.get_coplayed_user_ids") as mocked:
+            apply_played_filter(qs, self.viewer, "all")
+            mocked.assert_not_called()
+
+        with patch("account.service.get_coplayed_user_ids", return_value={self.friend.pk}) as mocked:
+            apply_played_filter(qs, self.viewer, "played")
+            mocked.assert_called_once()
+
+    def test_coplayed_user_ids(self):
+        from account.service import get_coplayed_user_ids
+
+        self.assertEqual(get_coplayed_user_ids(self.viewer), {self.friend.pk})
+
+    def test_user_list_does_not_query_friendship_per_user(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        self.client.force_login(self.viewer)
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(reverse("user_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "friend_user")
+        self.assertContains(response, "stranger_user")
+        friendship_queries = [
+            query["sql"]
+            for query in ctx.captured_queries
+            if "account_friendship" in query["sql"].lower()
+        ]
+        # Входящие заявки + счётчик исходящих + один батч статусов, не N×EXISTS.
+        self.assertLessEqual(len(friendship_queries), 3)
+
+    def test_user_list_paginates(self):
+        from account.models import Profile
+        from account.views import USERS_PER_PAGE
+
+        for i in range(USERS_PER_PAGE + 2):
+            user = User.objects.create_user(
+                username=f"extra_{i:02d}", password="pass12345"
+            )
+            Profile.objects.get_or_create(user=user)
+
+        self.client.force_login(self.viewer)
+        response = self.client.get(reverse("user_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["user_items"]), USERS_PER_PAGE)
+        self.assertTrue(response.context["users_page"].has_next())
+        self.assertContains(response, "users-page-more-btn")
+
+        page2 = self.client.get(
+            reverse("user_list"), {"users_only": "1", "page": "2"}
+        )
+        self.assertEqual(page2.status_code, 200)
+        self.assertEqual(page2["X-Has-Next"], "0")
+        self.assertContains(page2, "extra_")
+

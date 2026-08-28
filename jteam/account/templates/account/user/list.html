@@ -116,9 +116,7 @@
 
   <div class="users-page__list" id="users-list">
     {% if user_items %}
-      {% for item in user_items %}
-        {% include "account/user/_user_row.html" %}
-      {% endfor %}
+      {% include "account/user/list_users.html" %}
     {% else %}
       <p class="users-page__empty">
         {% if query %}
@@ -133,6 +131,14 @@
       </p>
     {% endif %}
   </div>
+
+  {% if users_page.has_next %}
+    <div class="users-page-more">
+      <button type="button" class="users-page-more__btn" id="users-page-more-btn">
+        Ещё
+      </button>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}
 

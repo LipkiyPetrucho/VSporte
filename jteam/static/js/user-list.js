@@ -142,4 +142,71 @@
             filterToggle.setAttribute('aria-expanded', String(isOpen));
         });
     }
+
+    var page = 1;
+    var emptyPage = false;
+    var blockRequest = false;
+    var moreBtn = document.getElementById('users-page-more-btn');
+    var moreWrap = moreBtn ? moreBtn.closest('.users-page-more') : null;
+
+    function hideMoreButton() {
+        if (moreWrap) {
+            moreWrap.hidden = true;
+        }
+    }
+
+    function loadMoreUsers() {
+        if (emptyPage || blockRequest) {
+            return;
+        }
+        blockRequest = true;
+        if (moreBtn) {
+            moreBtn.disabled = true;
+        }
+        page += 1;
+
+        var urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('page', page);
+        urlParams.set('users_only', '1');
+
+        fetch('?' + urlParams.toString(), { credentials: 'same-origin' })
+            .then(function (response) {
+                var hasNext = response.headers.get('X-Has-Next');
+                return response.text().then(function (html) {
+                    return { html: html, hasNext: hasNext };
+                });
+            })
+            .then(function (result) {
+                var html = result.html;
+                if (!html || !html.trim()) {
+                    emptyPage = true;
+                    hideMoreButton();
+                    return;
+                }
+                var usersList = document.getElementById('users-list');
+                if (usersList) {
+                    usersList.insertAdjacentHTML('beforeend', html);
+                }
+                if (result.hasNext === '0') {
+                    emptyPage = true;
+                    hideMoreButton();
+                    return;
+                }
+                blockRequest = false;
+                if (moreBtn) {
+                    moreBtn.disabled = false;
+                }
+            })
+            .catch(function () {
+                blockRequest = false;
+                page -= 1;
+                if (moreBtn) {
+                    moreBtn.disabled = false;
+                }
+            });
+    }
+
+    if (moreBtn) {
+        moreBtn.addEventListener('click', loadMoreUsers);
+    }
 })();

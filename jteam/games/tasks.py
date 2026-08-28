@@ -1,9 +1,11 @@
 from celery import shared_task
+from django.db import connection
 from django.utils import timezone
 from games.models import Game
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 def sync_game_statuses():
     """
@@ -15,15 +17,19 @@ def sync_game_statuses():
     """
     now = timezone.now()
 
-    games_to_start = Game.objects.filter(status="open", start_time__lte=now)
-    started_count = games_to_start.update(status="started")
+    started_count = Game.objects.filter(
+        status="open", start_time__lte=now
+    ).update(status="started")
 
-    finished_count = 0
-    for game in Game.objects.filter(status="started"):
-        if now >= game.start_time + game.duration:
-            game.status = "finished"
-            game.save(update_fields=["status"])
-            finished_count += 1
+    table = connection.ops.quote_name(Game._meta.db_table)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"UPDATE {table} "
+            "SET status = %s "
+            "WHERE status = %s AND start_time + duration <= %s",
+            ["finished", "started", now],
+        )
+        finished_count = cursor.rowcount
 
     return started_count, finished_count
 

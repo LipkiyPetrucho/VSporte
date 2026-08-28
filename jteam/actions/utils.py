@@ -59,9 +59,8 @@ def create_action(user, verb, target=None):
     if target:
         target_ct = ContentType.objects.get_for_model(target)
         similar_action = similar_action.filter(target_ct=target_ct, target_id=target.id)
-    if not similar_action:
-        # никаких существующих действий не найдено
-        action = Action(user=user, verb=verb, target=target)
-        action.save()
-        return True
-    return False
+    if similar_action.exists():
+        return False
+    action = Action(user=user, verb=verb, target=target)
+    action.save()
+    return True

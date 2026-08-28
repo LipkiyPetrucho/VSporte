@@ -175,58 +175,83 @@ def _recipient_allows_notification(recipient, notification_type):
 
 
 def create_notification(recipient, actor, notification_type, target):
-    if recipient == actor:
-        return None
+    created = _bulk_create_notifications(
+        [recipient], actor, notification_type, target
+    )
+    return created[0] if created else None
 
-    if not _recipient_allows_notification(recipient, notification_type):
-        return None
+
+def _bulk_create_notifications(recipients, actor, notification_type, target):
+    """Создаёт уведомления пачкой: один SELECT на дубликаты + bulk_create."""
+    actor_id = getattr(actor, "pk", None)
+    unique = {}
+    for recipient in recipients:
+        if not recipient or recipient.pk == actor_id:
+            continue
+        if not _recipient_allows_notification(recipient, notification_type):
+            continue
+        unique[recipient.pk] = recipient
+    if not unique:
+        return []
 
     now = timezone.now()
     last_minute = now - datetime.timedelta(seconds=60)
     target_ct = ContentType.objects.get_for_model(target)
-    similar = Notification.objects.filter(
-        recipient=recipient,
-        actor=actor,
-        notification_type=notification_type,
-        target_ct=target_ct,
-        target_id=target.pk,
-        created__gte=last_minute,
+    recent_ids = set(
+        Notification.objects.filter(
+            recipient_id__in=unique.keys(),
+            actor_id=actor_id,
+            notification_type=notification_type,
+            target_ct=target_ct,
+            target_id=target.pk,
+            created__gte=last_minute,
+        ).values_list("recipient_id", flat=True)
     )
-    if similar.exists():
-        return None
-
-    return Notification.objects.create(
-        recipient=recipient,
-        actor=actor,
-        notification_type=notification_type,
-        target=target,
-    )
+    to_create = [
+        Notification(
+            recipient_id=recipient.pk,
+            actor_id=actor_id,
+            notification_type=notification_type,
+            target_ct=target_ct,
+            target_id=target.pk,
+        )
+        for recipient in unique.values()
+        if recipient.pk not in recent_ids
+    ]
+    if not to_create:
+        return []
+    return Notification.objects.bulk_create(to_create)
 
 
 def notify_game_chat_message(message):
     """Уведомляет организатора и участников о новом сообщении (кроме автора)."""
     game = message.game
-    actor = message.author
-    recipients = {game.user}
-    recipients.update(game.joined_players.all())
-    for recipient in recipients:
-        create_notification(
-            recipient,
-            actor,
-            Notification.TYPE_CHAT_MESSAGE,
-            message,
-        )
+    recipients = _game_notification_recipients(game, include_organizer=True)
+    _bulk_create_notifications(
+        recipients, message.author, Notification.TYPE_CHAT_MESSAGE, message
+    )
 
 
 def notify_game_updated(game, actor):
     """Уведомляет участников об изменении условий мероприятия."""
-    for recipient in game.joined_players.all():
-        create_notification(
-            recipient,
-            actor,
-            Notification.TYPE_GAME_UPDATED,
-            game,
-        )
+    _bulk_create_notifications(
+        _game_notification_recipients(game),
+        actor,
+        Notification.TYPE_GAME_UPDATED,
+        game,
+    )
+
+
+def _game_notification_recipients(game, include_organizer=False):
+    cache = getattr(game, "_prefetched_objects_cache", None)
+    if cache is not None and "joined_players" in cache:
+        players = list(cache["joined_players"])
+    else:
+        players = list(game.joined_players.select_related("profile"))
+    recipients = {player.pk: player for player in players}
+    if include_organizer and game.user_id not in recipients:
+        recipients[game.user_id] = game.user
+    return recipients.values()
 
 
 def get_unread_count(user):

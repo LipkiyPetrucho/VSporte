@@ -438,6 +438,37 @@ body.page-users ul.messages {
     }
 }
 
+.users-page-more {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0 24px;
+}
+
+.users-page-more[hidden] {
+    display: none;
+}
+
+.users-page-more__btn {
+    min-width: 160px;
+    border: none;
+    border-radius: 14px;
+    background: #2f5d50;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 14px 28px;
+    cursor: pointer;
+}
+
+.users-page-more__btn:hover:not(:disabled) {
+    background: #274e43;
+}
+
+.users-page-more__btn:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
 @media (min-width: 769px) {
     .users-page__filter {
         display: block !important;

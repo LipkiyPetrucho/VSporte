@@ -15,7 +15,7 @@
      data-status-url="{% url 'games:status' game.id %}"
      data-max-players="{{ game.max_players }}"
      data-extra-players="{{ game.extra_players }}"
-     data-joined-count="{{ game.joined_players.count }}"
+     data-joined-count="{{ joined_count }}"
      data-available-seats="{{ available_seats }}"
      data-join-url="{% url 'games:join' %}"
      data-participation-url="{% url 'games:participation' %}"
@@ -67,7 +67,7 @@
       </div>
       <h1 class="game-view-title">{{ game.get_sport_display }}</h1>
       <p class="game-view-datetime">
-        {{ game.start_time|date:"H:i" }} - {{ end_time|date:"H:i" }} • {{ game.start_time|date:"j b Y" }}
+        {{ game.start_time|date:"H:i" }} - {{ end_time|date:"H:i" }} • {{ game.start_time|game_date_ru }}
       </p>
       <span id="game-header-status" class="game-view-status game-status status-{{ game.status }}">
         {{ game.status|game_status_label }}
@@ -136,7 +136,7 @@
         </div>
 
         <div id="participants-preview">
-          {% if game.joined_players.exists %}
+          {% if joined_count %}
             {% for player in game.joined_players.all %}
               <div class="game-view-participant{% if player == game.user %} game-view-participant--organizer{% endif %}">
                 {% if player.profile.photo %}
@@ -291,7 +291,7 @@
 
         <div class="game-view-players-panel" id="players-panel" hidden>
           <div id="players-list">
-            {% if game.joined_players.exists %}
+            {% if joined_count %}
               <div class="game-view-players-grid">
                 {% for player in game.joined_players.all %}
                   <div class="game-view-player-card">

@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db.models import Count, Prefetch, prefetch_related_objects
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -27,9 +28,16 @@ def _member_thumb_url(member, size=(80, 80)):
     return get_thumbnailer(photo).get_thumbnail(thumb_opts).url
 
 
+def _members_with_profiles(community):
+    cache = getattr(community, "_prefetched_objects_cache", None)
+    if cache is not None and "members" in cache:
+        return community.members.all()
+    return community.members.select_related("profile").all()
+
+
 def _build_members_payload(community):
     members = []
-    for member in community.members.select_related("profile").all():
+    for member in _members_with_profiles(community):
         members.append(
             {
                 "id": member.pk,
@@ -42,10 +50,19 @@ def _build_members_payload(community):
     return members
 
 
+def _user_is_member(community, user):
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+    cache = getattr(community, "_prefetched_objects_cache", None)
+    if cache is not None and "members" in cache:
+        return any(member.pk == user.pk for member in cache["members"])
+    return community.members.filter(pk=user.pk).exists()
+
+
 def _membership_status_for_user(community, user):
     if not user.is_authenticated:
         return "none"
-    if user in community.members.all():
+    if _user_is_member(community, user):
         return "joined"
     if CommunityInvitation.objects.filter(
         community=community,
@@ -71,7 +88,12 @@ def _pending_invitation_for_user(community, user):
 
 
 def _invitable_friends(community, owner):
-    member_ids = set(community.members.values_list("pk", flat=True)) | {owner.pk}
+    cache = getattr(community, "_prefetched_objects_cache", None)
+    if cache is not None and "members" in cache:
+        member_ids = {member.pk for member in cache["members"]}
+    else:
+        member_ids = set(community.members.values_list("pk", flat=True))
+    member_ids.add(owner.pk)
     pending_invitee_ids = set(
         CommunityInvitation.objects.filter(
             community=community,
@@ -86,12 +108,25 @@ def _invitable_friends(community, owner):
     ]
 
 
+def _prefetch_community_members(community):
+    prefetch_related_objects(
+        [community],
+        Prefetch(
+            "members",
+            queryset=User.objects.select_related("profile"),
+        ),
+    )
+    return community
+
+
 def _membership_response(community, user):
+    _prefetch_community_members(community)
+    members = _build_members_payload(community)
     membership_status = _membership_status_for_user(community, user)
     payload = {
         "status": "ok",
-        "members": _build_members_payload(community),
-        "members_count": community.members.count(),
+        "members": members,
+        "members_count": len(members),
         "membership_status": membership_status,
     }
     if membership_status == "pending":
@@ -129,7 +164,9 @@ def community_list(request):
     """Постраничный список групп с фильтром по виду спорта."""
     communities = Community.objects.select_related(
         "owner", "owner__profile"
-    ).prefetch_related("members")
+    ).annotate(members_count=Count("members", distinct=True)).order_by(
+        "-created_at"
+    )
     form = CommunityFilterForm(request.GET)
 
     if form.is_valid():
@@ -192,13 +229,23 @@ def community_create(request):
 
 
 def community_detail(request, id, slug):
-    community = get_object_or_404(Community, id=id, slug=slug)
+    community = get_object_or_404(
+        Community.objects.select_related("owner", "owner__profile").prefetch_related(
+            Prefetch(
+                "members",
+                queryset=User.objects.select_related("profile"),
+            )
+        ),
+        id=id,
+        slug=slug,
+    )
+    members = list(community.members.all())
+    members_count = len(members)
     is_owner = (
         request.user.is_authenticated and request.user == community.owner
     )
-    is_member = (
-        request.user.is_authenticated
-        and request.user in community.members.all()
+    is_member = request.user.is_authenticated and any(
+        member.pk == request.user.pk for member in members
     )
     has_pending_request = False
     has_pending_invitation = False
@@ -238,6 +285,15 @@ def community_detail(request, id, slug):
                 .order_by("created")
             )
 
+    if is_member:
+        membership_status = "joined"
+    elif has_pending_invitation:
+        membership_status = "invited"
+    elif has_pending_request:
+        membership_status = "pending"
+    else:
+        membership_status = "none"
+
     return render(
         request,
         "groups/community/detail.html",
@@ -253,10 +309,8 @@ def community_detail(request, id, slug):
             "pending_join_requests": pending_join_requests,
             "invite_friends": invite_friends,
             "pending_invitations": pending_invitations,
-            "members_count": community.members.count(),
-            "membership_status": _membership_status_for_user(
-                community, request.user
-            ),
+            "members_count": members_count,
+            "membership_status": membership_status,
         },
     )
 
@@ -317,7 +371,7 @@ def community_join(request):
     except Community.DoesNotExist:
         return JsonResponse({"status": "error"})
 
-    if request.user in community.members.all():
+    if community.members.filter(pk=request.user.pk).exists():
         return JsonResponse(
             {
                 "status": "error",
@@ -395,7 +449,7 @@ def community_leave(request):
             }
         )
 
-    if request.user not in community.members.all():
+    if not community.members.filter(pk=request.user.pk).exists():
         return JsonResponse(
             {
                 "status": "error",
@@ -573,7 +627,7 @@ def community_invite(request):
         to_user = get_object_or_404(User, id=to_user_id)
         if to_user == request.user:
             return JsonResponse({"status": "error"})
-        if to_user in community.members.all():
+        if community.members.filter(pk=to_user.pk).exists():
             return JsonResponse(
                 {
                     "status": "error",
@@ -654,7 +708,7 @@ def community_invite(request):
                     "message": "Приглашение уже обработано.",
                 }
             )
-        if request.user in community.members.all():
+        if community.members.filter(pk=request.user.pk).exists():
             return JsonResponse(
                 {
                     "status": "error",

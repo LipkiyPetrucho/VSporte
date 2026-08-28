@@ -136,6 +136,8 @@ class Friendship(models.Model):
         ]
         indexes = [
             models.Index(fields=["-created"]),
+            models.Index(fields=["from_user", "status"]),
+            models.Index(fields=["to_user", "status"]),
         ]
         ordering = ["-created"]
 
@@ -165,6 +167,7 @@ class UserBlock(models.Model):
         ]
         indexes = [
             models.Index(fields=["-created"]),
+            models.Index(fields=["blocker"]),
         ]
         ordering = ["-created"]
 

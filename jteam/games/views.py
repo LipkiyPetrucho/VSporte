@@ -16,7 +16,7 @@ from django.views.decorators.http import require_GET, require_POST
 from actions.utils import create_action
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Greatest
-from django.db.models import Case, When, IntegerField, Q
+from django.db.models import Case, When, IntegerField, Q, Count, Prefetch, prefetch_related_objects
 from easy_thumbnails.files import get_thumbnailer
 from notifications.models import Notification
 from notifications.services import create_notification, notify_game_updated
@@ -30,7 +30,6 @@ from .forms import (
     snapshot_game_conditions,
 )
 from .models import Game, GameParticipationRequest, GameInvitation, GameTeamAssignment
-from .tasks import sync_game_statuses
 from .templatetags.game_extras import GAME_STATUS_LABELS
 
 logger = logging.getLogger(__name__)
@@ -93,9 +92,17 @@ def _player_thumb_url(player, size=(80, 80)):
     return get_thumbnailer(photo).get_thumbnail(thumb_opts).url
 
 
+def _joined_players_with_profiles(game):
+    """Состав игры: использует prefetch, иначе один запрос с profile."""
+    cache = getattr(game, "_prefetched_objects_cache", None)
+    if cache is not None and "joined_players" in cache:
+        return game.joined_players.all()
+    return game.joined_players.select_related("profile").all()
+
+
 def _build_players_payload(game):
     players = []
-    for player in game.joined_players.select_related("profile").all():
+    for player in _joined_players_with_profiles(game):
         players.append({
             "id": player.pk,
             "username": player.username,
@@ -110,7 +117,7 @@ def _serialize_team_roster(game):
     roster = game.team_roster()
     players_by_id = {
         player.pk: player
-        for player in game.joined_players.select_related("profile").all()
+        for player in _joined_players_with_profiles(game)
     }
 
     def enrich(entry):
@@ -148,8 +155,18 @@ def _parse_request_payload(request):
     return request.POST
 
 
+def _user_is_joined(game, user):
+    """Проверка участия без загрузки всего состава, с учётом prefetch."""
+    if not user or not getattr(user, "pk", None):
+        return False
+    cache = getattr(game, "_prefetched_objects_cache", None)
+    if cache is not None and "joined_players" in cache:
+        return any(player.pk == user.pk for player in cache["joined_players"])
+    return game.joined_players.filter(pk=user.pk).exists()
+
+
 def _participation_status_for_user(game, user):
-    if user in game.joined_players.all():
+    if _user_is_joined(game, user):
         return "joined"
     if GameInvitation.objects.filter(
         game=game,
@@ -175,9 +192,12 @@ def _pending_invitation_for_user(game, user):
 
 
 def _invitable_friends(game, organizer):
-    joined_ids = set(
-        game.joined_players.values_list("pk", flat=True)
-    ) | {organizer.pk}
+    cache = getattr(game, "_prefetched_objects_cache", None)
+    if cache is not None and "joined_players" in cache:
+        joined_ids = {player.pk for player in cache["joined_players"]}
+    else:
+        joined_ids = set(game.joined_players.values_list("pk", flat=True))
+    joined_ids.add(organizer.pk)
     pending_invitee_ids = set(
         GameInvitation.objects.filter(
             game=game,
@@ -192,15 +212,35 @@ def _invitable_friends(game, organizer):
     ]
 
 
+def _prefetch_game_players(game):
+    """Один prefetch состава и назначений после add/remove."""
+    prefetch_related_objects(
+        [game],
+        Prefetch(
+            "joined_players",
+            queryset=User.objects.select_related("profile"),
+        ),
+        Prefetch(
+            "team_assignments",
+            queryset=GameTeamAssignment.objects.select_related("user"),
+        ),
+    )
+    return game
+
+
 def _join_response(game, user):
+    _prefetch_game_players(game)
+    players = _build_players_payload(game)
+    joined_count = len(players)
+    occupied = joined_count + game.extra_players
     payload = {
         "status": "ok",
-        "players": _build_players_payload(game),
-        "joined_count": game.joined_count(),
+        "players": players,
+        "joined_count": joined_count,
         "extra_players": game.extra_players,
-        "players_count": game.occupied_seats(),
+        "players_count": occupied,
         "max_players": game.max_players,
-        "available_seats": game.available_seats(),
+        "available_seats": max(0, game.max_players - occupied),
         "participation_status": _participation_status_for_user(game, user),
     }
     if game.is_team_game:
@@ -344,15 +384,29 @@ def _edit_form_context(form, game):
 
 
 def game_detail(request, id, slug):
-    game = get_object_or_404(Game, id=id, slug=slug)
+    game = get_object_or_404(
+        Game.objects.select_related("user", "user__profile").prefetch_related(
+            Prefetch(
+                "joined_players",
+                queryset=User.objects.select_related("profile"),
+            ),
+            Prefetch(
+                "team_assignments",
+                queryset=GameTeamAssignment.objects.select_related("user"),
+            ),
+        ),
+        id=id,
+        slug=slug,
+    )
     game.sync_status()
     total_views = track_game_view(game.id)
     end_time = game.start_time + game.duration
+    joined_players = list(game.joined_players.all())
+    joined_count = len(joined_players)
+    occupied_seats = joined_count + game.extra_players
+    available_seats = max(0, game.max_players - occupied_seats)
     is_organizer = request.user.is_authenticated and request.user == game.user
-    is_joined = (
-        request.user.is_authenticated
-        and request.user in game.joined_players.all()
-    )
+    is_joined = request.user.is_authenticated and _user_is_joined(game, request.user)
     has_pending_request = False
     has_pending_invitation = False
     pending_invitation = None
@@ -399,9 +453,10 @@ def game_detail(request, id, slug):
             "total_views": total_views,
             "end_time": end_time,
             "total_cost": game.price * game.max_players,
-            "available_seats": game.available_seats(),
-            "occupied_seats": game.occupied_seats(),
-            "max_extra_players": max(0, game.max_players - game.joined_players.count()),
+            "available_seats": available_seats,
+            "occupied_seats": occupied_seats,
+            "joined_count": joined_count,
+            "max_extra_players": max(0, game.max_players - joined_count),
             "is_organizer": is_organizer,
             "is_joined": is_joined,
             "has_pending_request": has_pending_request,
@@ -526,9 +581,9 @@ def game_status(request, id):
 @login_required
 def game_list(request):
     """Выводит постраничный список игр с фильтрацией"""
-    sync_game_statuses()
-    games = Game.objects.select_related("user", "user__profile").prefetch_related(
-        "joined_players"
+    games_only = request.GET.get("games_only")
+    games = Game.objects.select_related("user", "user__profile").annotate(
+        joined_players_count=Count("joined_players", distinct=True),
     )
     form = GameFilterForm(request.GET)
     active_tab = request.GET.get("tab", "my_sport")
@@ -537,7 +592,7 @@ def game_list(request):
 
     open_only = request.GET.get("open_only") in {"1", "true", "yes", "on"}
 
-    user_sports = (
+    user_sports = list(
         Game.objects.filter(Q(user=request.user) | Q(joined_players=request.user))
         .values_list("sport", flat=True)
         .distinct()
@@ -583,9 +638,7 @@ def game_list(request):
 
     # Пагинация: по 6 карточек, дальше — кнопка «Ещё»
     paginator = Paginator(games, 6)
-    page = request.GET.get("page")
-    games_only = request.GET.get("games_only")
-    
+    page = request.GET.get("page") 
     try:
         games = paginator.page(page)
     except PageNotAnInteger:
@@ -643,21 +696,20 @@ def game_join(request):
         })
 
     if action == "join":
-        if request.user in game.joined_players.all():
+        if _user_is_joined(game, request.user):
             return JsonResponse({
                 "status": "error",
                 "message": "Вы уже участвуете в этой игре.",
             })
 
-        if game.is_full() and request.user != game.user:
+        joined_count = game.joined_players.count()
+        occupied = joined_count + game.extra_players
+        if occupied >= game.max_players and request.user != game.user:
             return JsonResponse({
                 "status": "error",
                 "message": "Максимальное количество игроков достигнуто.",
             })
-        if (
-            request.user == game.user
-            and game.joined_players.count() >= game.max_players
-        ):
+        if request.user == game.user and joined_count >= game.max_players:
             return JsonResponse({
                 "status": "error",
                 "message": "Максимальное количество игроков достигнуто.",
@@ -722,7 +774,7 @@ def game_join(request):
         return _join_response(game, request.user)
 
     if action == "leave":
-        if request.user not in game.joined_players.all():
+        if not _user_is_joined(game, request.user):
             return JsonResponse({
                 "status": "error",
                 "message": "Вы не участвуете в этой игре.",
@@ -906,7 +958,7 @@ def game_invite(request):
         to_user = get_object_or_404(User, id=to_user_id)
         if to_user == request.user:
             return JsonResponse({"status": "error"})
-        if to_user in game.joined_players.all():
+        if _user_is_joined(game, to_user):
             return JsonResponse({
                 "status": "error",
                 "message": "Игрок уже участвует в игре.",
@@ -980,7 +1032,7 @@ def game_invite(request):
                 "status": "error",
                 "message": "Приглашение уже обработано.",
             })
-        if request.user in game.joined_players.all():
+        if _user_is_joined(game, request.user):
             return JsonResponse({
                 "status": "error",
                 "message": "Вы уже участвуете в этой игре.",

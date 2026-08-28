@@ -123,8 +123,9 @@ class GameChatConsumer(AsyncJsonWebsocketConsumer):
                 "author__profile",
                 "game",
                 "game__user",
+                "game__user__profile",
             )
-            .prefetch_related("game__joined_players")
+            .prefetch_related("game__joined_players__profile")
             .get(pk=message.pk)
         )
         notify_game_chat_message(message)

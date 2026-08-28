@@ -273,12 +273,12 @@ body.page-profile-edit .profile-edit select {
     user-select: none;
 }
 
-.profile-edit__interest-option input:checked + .profile-edit__interest-tag {
+.profile-edit__interest-option input:checked+.profile-edit__interest-tag {
     background: #444;
     color: #fff;
 }
 
-.profile-edit__interest-option input:focus-visible + .profile-edit__interest-tag {
+.profile-edit__interest-option input:focus-visible+.profile-edit__interest-tag {
     outline: 2px solid #12c064;
     outline-offset: 2px;
 }
@@ -320,11 +320,11 @@ body.page-profile-edit .profile-edit select {
     transition: transform 0.2s;
 }
 
-.profile-edit__toggle-input:checked + .profile-edit__toggle-slider {
+.profile-edit__toggle-input:checked+.profile-edit__toggle-slider {
     background: #12c064;
 }
 
-.profile-edit__toggle-input:checked + .profile-edit__toggle-slider::before {
+.profile-edit__toggle-input:checked+.profile-edit__toggle-slider::before {
     transform: translateX(20px);
 }
 

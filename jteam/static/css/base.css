@@ -2253,6 +2253,11 @@ body.page-dashboard ul.messages {
     color: #12c064;
 }
 
+.dashboard-home__create {
+    display: flex;
+    margin-bottom: 16px;
+}
+
 .dashboard-mobile-next-game {
     display: block;
     background: #fff;

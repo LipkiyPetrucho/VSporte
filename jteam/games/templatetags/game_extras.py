@@ -62,6 +62,15 @@ def game_datetime_mobile(value):
 
 
 @register.filter
+def game_date_ru(value):
+    """Дата карточки игры: «17 авг. 2026», без зависимости от локали браузера."""
+    if not value:
+        return ""
+    local = timezone.localtime(value)
+    return f"{local.day} {RU_MONTHS[local.month]} {local.year}"
+
+
+@register.filter
 def going_label(count):
     count = int(count)
     if count % 10 == 1 and count % 100 != 11:

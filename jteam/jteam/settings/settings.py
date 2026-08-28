@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     # 'django_extensions',
     "crispy_forms",
     "crispy_bootstrap5",
-    "fontawesomefree",
+    # не в INSTALLED_APPS: копия уже в static/, иначе collectstatic дублирует пути
     "easy_thumbnails",
     "bootstrap5",
 ]
@@ -109,6 +109,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "ru"
+LANGUAGES = [
+    ("ru", "Русский"),
+]
 
 TIME_ZONE = "Europe/Samara"
 

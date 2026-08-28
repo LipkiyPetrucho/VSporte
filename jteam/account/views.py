@@ -5,6 +5,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordChangeView
 from django.contrib import messages
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST, require_http_methods
 from django.db import transaction
@@ -42,9 +43,12 @@ from .service import (
     search_users,
     apply_played_filter,
     get_friendship_status,
+    get_friendship_statuses_for_users,
     get_profile_stats,
     get_incoming_friend_requests,
     get_outgoing_friend_requests,
+    count_incoming_friend_requests,
+    count_outgoing_friend_requests,
     ensure_profile,
     is_blocked,
     block_user,
@@ -55,6 +59,7 @@ from .service import (
 
 
 PENDING_PHONE_CHANGE_SESSION_KEY = "pending_phone_change"
+USERS_PER_PAGE = 20
 
 
 def user_login(request):
@@ -491,11 +496,19 @@ def user_list(request):
     if requests_filter not in ("incoming", "outgoing"):
         requests_filter = "incoming"
 
-    incoming_requests = get_incoming_friend_requests(request.user)
-    outgoing_requests = get_outgoing_friend_requests(request.user)
-    request_items = (
-        incoming_requests if requests_filter == "incoming" else outgoing_requests
-    )
+    users_only = request.GET.get("users_only")
+    incoming_count = 0
+    outgoing_count = 0
+    request_items = []
+    if not users_only:
+        if requests_filter == "incoming":
+            request_items = get_incoming_friend_requests(request.user)
+            incoming_count = len(request_items)
+            outgoing_count = count_outgoing_friend_requests(request.user)
+        else:
+            request_items = get_outgoing_friend_requests(request.user)
+            outgoing_count = len(request_items)
+            incoming_count = count_incoming_friend_requests(request.user)
 
     users = apply_played_filter(users, request.user, played_filter)
 
@@ -506,16 +519,36 @@ def user_list(request):
         if form.is_valid():
             query = form.cleaned_data["query"]
             if query:
-                user_ids = search_users(query).values_list("pk", flat=True)
-                users = users.filter(pk__in=user_ids)
+                users = search_users(query, queryset=users)
 
+    paginator = Paginator(users, USERS_PER_PAGE)
+    page = request.GET.get("page")
+    try:
+        users_page = paginator.page(page)
+    except PageNotAnInteger:
+        users_page = paginator.page(1)
+    except EmptyPage:
+        if users_only:
+            return HttpResponse("")
+        users_page = paginator.page(paginator.num_pages)
+
+    status_map = get_friendship_statuses_for_users(request.user, users_page)
     user_items = [
         {
             "user": user,
-            "friendship": get_friendship_status(request.user, user),
+            "friendship": status_map.get(user.pk, "none"),
         }
-        for user in users
+        for user in users_page
     ]
+
+    if users_only:
+        response = render(
+            request,
+            "account/user/list_users.html",
+            {"user_items": user_items},
+        )
+        response["X-Has-Next"] = "1" if users_page.has_next() else "0"
+        return response
 
     return render(
         request,
@@ -523,13 +556,14 @@ def user_list(request):
         {
             "section": "people",
             "user_items": user_items,
+            "users_page": users_page,
             "form": form,
             "query": query,
             "played_filter": played_filter,
             "requests_filter": requests_filter,
             "request_items": request_items,
-            "incoming_count": len(incoming_requests),
-            "outgoing_count": len(outgoing_requests),
+            "incoming_count": incoming_count,
+            "outgoing_count": outgoing_count,
         },
     )
 
